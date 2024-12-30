@@ -49,10 +49,10 @@ export default function Home() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-16 h-full">
               {/* Text content */}
               <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5 }}
-                className="flex flex-col items-start justify-center"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
+                className="flex flex-col items-start justify-center max-w-2xl mx-auto lg:mx-0"
               >
                 <h1 className="text-4xl font-bold tracking-tight text-[#f5f5f5] sm:text-6xl">
                   {personalInfo.name}
@@ -67,7 +67,7 @@ export default function Home() {
                       href={personalInfo.social.github}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[#f5f5f5] hover:text-[#646cff]"
+                      className="text-[#f5f5f5] hover:text-[#646cff] transition-colors duration-200"
                     >
                       <span className="sr-only">GitHub</span>
                       <svg
@@ -88,36 +88,45 @@ export default function Home() {
 
               {/* Profile card */}
               <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5 }}
-                className="relative flex items-center justify-center lg:justify-end"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: "easeOut", delay: 0.1 }}
+                className="relative flex items-center justify-center lg:justify-end pt-8 lg:pt-0"
               >
-                <div className="relative w-72 h-96">
-                  {/* Enhanced glowing background effect */}
+                <div className="relative w-72 h-96 max-w-full">
+                  {/* Card content */}
                   <div className="absolute -inset-2">
-                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 opacity-75 blur-3xl animate-glow" />
+                    <div 
+                      className="absolute inset-0 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 opacity-75 blur-2xl"
+                      style={{ 
+                        willChange: 'filter',
+                        transform: 'translateZ(0)'
+                      }} 
+                    />
                   </div>
                   
-                  {/* Card frame with increased blur and glow */}
-                  <div className="relative bg-[#1a1a1a] rounded-3xl border border-[#ffffff30] backdrop-blur-xl overflow-hidden shadow-[0_0_50px_-12px_rgba(168,85,247,0.6)]">
-                    {/* Card inner glow */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 via-purple-500/20 to-pink-500/20" />
+                  <div className="relative bg-[#1a1a1a] rounded-3xl border border-[#ffffff30] backdrop-blur-xl overflow-hidden shadow-lg transform-gpu">
+                    <div 
+                      className="absolute inset-0 bg-gradient-to-br from-blue-500/20 via-purple-500/20 to-pink-500/20"
+                      style={{ willChange: 'opacity' }}
+                    />
                     
-                    {/* Profile image */}
                     {personalInfo.profilePhoto && (
                       <div className="relative h-full w-full">
                         <img
                           src={personalInfo.profilePhoto}
                           alt={personalInfo.name}
                           className="h-full w-full object-cover"
+                          loading="eager"
+                          style={{ willChange: 'transform' }}
                         />
-                        {/* Overlay gradient */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/90 via-transparent to-[#1a1a1a]/30" />
+                        <div 
+                          className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/90 via-transparent to-[#1a1a1a]/30"
+                          style={{ willChange: 'opacity' }}
+                        />
                       </div>
                     )}
 
-                    {/* Decorative elements */}
                     <div className="absolute top-4 left-4 w-8 h-8 rounded-full bg-gradient-to-br from-blue-500/30 to-purple-500/30 backdrop-blur-xl border border-[#ffffff30]" />
                     <div className="absolute bottom-4 right-4 w-6 h-6 rounded-full bg-gradient-to-br from-purple-500/30 to-pink-500/30 backdrop-blur-xl border border-[#ffffff30]" />
                   </div>
@@ -127,29 +136,6 @@ export default function Home() {
           </div>
 
           {/* Navigation buttons in fixed position at bottom */}
-          <motion.div
-            variants={item}
-            className="flex flex-wrap items-center justify-center gap-4 py-8"
-          >
-            <Link
-              to="/about"
-              className="rounded-md bg-[#646cff] px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-[#747bff] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#646cff] transition-all duration-200"
-            >
-              About Me
-            </Link>
-            <Link
-              to="/portfolio"
-              className="rounded-md bg-[#ffffff0d] px-6 py-3 text-sm font-semibold text-[#f5f5f5] shadow-sm hover:bg-[#ffffff1a] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#646cff] transition-all duration-200"
-            >
-              View Portfolio
-            </Link>
-            <Link
-              to="/contact"
-              className="rounded-md bg-[#ffffff0d] px-6 py-3 text-sm font-semibold text-[#f5f5f5] shadow-sm hover:bg-[#ffffff1a] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#646cff] transition-all duration-200"
-            >
-              Contact Me
-            </Link>
-          </motion.div>
         </div>
       </div>
 

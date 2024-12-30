@@ -1,0 +1,65 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    
+    // Content collection (about, settings, etc.)
+    match /content/{document} {
+      allow read: if true;  // Public read access
+      allow write: if isAdmin();
+    }
+    
+    // Projects collection
+    match /projects/{projectId} {
+      allow read: if true;  // Public read access
+      allow write: if isAdmin();
+    }
+    
+    // Messages collection
+    match /messages/{messageId} {
+      allow read: if isAdmin();
+      allow create: if true;  // Allow public message submission
+      allow update, delete: if isAdmin();
+    }
+    
+    // Admins collection
+    match /admins/{userId} {
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      allow write: if false;  // Only manually add admins for security
+    }
+  }
+}
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    
+    // Project images
+    match /projects/{fileName} {
+      allow read: if true;  // Public read access
+      allow write: if isAdmin();
+    }
+    
+    // About section images
+    match /about/{fileName} {
+      allow read: if true;  // Public read access
+      allow write: if isAdmin();
+    }
+  }
+}

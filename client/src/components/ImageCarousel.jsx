@@ -24,9 +24,28 @@ const isValidImageUrl = (url) => {
 const ImageCarousel = ({ images, aspectRatio = '1/1', autoSlideInterval = 5000 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [screenWidth, setScreenWidth] = useState(window.innerWidth);
   const shouldReduceMotion = useReducedMotion();
-  const itemsPerPage = 4;
-  const slidePairs = 2; // Number of images to slide at once
+
+  // Responsive items per page
+  const getItemsPerPage = (width) => {
+    if (width < 640) return 1; // Mobile
+    if (width < 1024) return 2; // Tablet
+    return 4; // Desktop
+  };
+
+  const itemsPerPage = getItemsPerPage(screenWidth);
+  const slidePairs = Math.max(1, Math.floor(itemsPerPage / 2)); // Adjust slide pairs based on items per page
+
+  // Handle window resize
+  useEffect(() => {
+    const handleResize = () => {
+      setScreenWidth(window.innerWidth);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Normalize and filter image data structure
   const normalizedImages = images
@@ -46,7 +65,7 @@ const ImageCarousel = ({ images, aspectRatio = '1/1', autoSlideInterval = 5000 }
       const nextIndex = prevIndex + slidePairs;
       return nextIndex >= normalizedImages.length - (itemsPerPage - 1) ? 0 : nextIndex;
     });
-  }, [normalizedImages.length]);
+  }, [normalizedImages.length, slidePairs, itemsPerPage]);
 
   const prevSlide = () => {
     setCurrentIndex((prevIndex) => {
@@ -100,7 +119,7 @@ const ImageCarousel = ({ images, aspectRatio = '1/1', autoSlideInterval = 5000 }
           transition: {
             x: { duration: 0.8, ease: "easeOut" },
             opacity: { duration: 0.5 },
-            delay: Math.floor(index / 2) * 0.15 // Increased delay between pairs
+            delay: Math.floor(index / slidePairs) * 0.15
           }
         }),
         exit: (index) => ({
@@ -109,7 +128,7 @@ const ImageCarousel = ({ images, aspectRatio = '1/1', autoSlideInterval = 5000 }
           transition: {
             x: { duration: 0.8, ease: "easeIn" },
             opacity: { duration: 0.5 },
-            delay: Math.floor(index / 2) * 0.15 // Increased delay between pairs
+            delay: Math.floor(index / slidePairs) * 0.15
           }
         }),
       };
@@ -121,7 +140,7 @@ const ImageCarousel = ({ images, aspectRatio = '1/1', autoSlideInterval = 5000 }
       onMouseLeave={() => setIsPaused(false)}
     >
       <div className="relative overflow-hidden">
-        <div className="flex gap-4 p-4">
+        <div className="flex gap-2 sm:gap-3 md:gap-4 p-2 sm:p-3 md:p-4">
           <AnimatePresence mode="wait" initial={false}>
             {visibleImages.map((image, index) => (
               <motion.div
@@ -131,7 +150,7 @@ const ImageCarousel = ({ images, aspectRatio = '1/1', autoSlideInterval = 5000 }
                 initial="enter"
                 animate="center"
                 exit="exit"
-                className="flex-1 min-w-0"
+                className="flex-[0_0_auto] w-full sm:w-[calc(50%-0.75rem)] md:w-[calc(33.333%-1rem)] lg:w-[calc(25%-1rem)]"
                 style={{
                   willChange: 'transform, opacity'
                 }}
@@ -151,7 +170,6 @@ const ImageCarousel = ({ images, aspectRatio = '1/1', autoSlideInterval = 5000 }
                     className="w-full h-full object-cover transition-all duration-300 group-hover:blur-sm"
                     loading="lazy"
                     onError={(e) => {
-                      // Add gradient glow animation class
                       e.target.style.display = 'none';
                       e.target.parentElement.classList.add('gradient-glow-animation');
                     }}
@@ -171,52 +189,57 @@ const ImageCarousel = ({ images, aspectRatio = '1/1', autoSlideInterval = 5000 }
         </div>
       </div>
 
-      <div className="absolute inset-y-0 left-0 flex items-center">
-        <motion.button
-          whileHover={shouldReduceMotion ? {} : { 
-            scale: 1.1,
-            backgroundColor: 'rgba(26, 26, 26, 0.95)',
-            boxShadow: '0 8px 32px rgba(100, 108, 255, 0.15)'
-          }}
-          whileTap={shouldReduceMotion ? {} : { scale: 0.95 }}
-          onClick={prevSlide}
-          className="bg-[#1a1a1a]/60 text-white/90 p-3 rounded-xl m-2 backdrop-blur-md 
-                     border border-white/10 shadow-lg transition-all duration-300
-                     hover:border-[#646cff]/20"
-        >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-          </svg>
-        </motion.button>
-      </div>
-      
-      <div className="absolute inset-y-0 right-0 flex items-center">
-        <motion.button
-          whileHover={shouldReduceMotion ? {} : { 
-            scale: 1.1,
-            backgroundColor: 'rgba(26, 26, 26, 0.95)',
-            boxShadow: '0 8px 32px rgba(100, 108, 255, 0.15)'
-          }}
-          whileTap={shouldReduceMotion ? {} : { scale: 0.95 }}
-          onClick={nextSlide}
-          className="bg-[#1a1a1a]/60 text-white/90 p-3 rounded-xl m-2 backdrop-blur-md 
-                     border border-white/10 shadow-lg transition-all duration-300
-                     hover:border-[#646cff]/20"
-        >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-          </svg>
-        </motion.button>
-      </div>
+      {/* Navigation buttons - Hidden on small screens when showing single image */}
+      {(screenWidth >= 640 || normalizedImages.length > 1) && (
+        <>
+          <div className="absolute inset-y-0 left-0 flex items-center">
+            <motion.button
+              whileHover={shouldReduceMotion ? {} : { 
+                scale: 1.1,
+                backgroundColor: 'rgba(26, 26, 26, 0.95)',
+                boxShadow: '0 8px 32px rgba(100, 108, 255, 0.15)'
+              }}
+              whileTap={shouldReduceMotion ? {} : { scale: 0.95 }}
+              onClick={prevSlide}
+              className="bg-[#1a1a1a]/60 text-white/90 p-2 sm:p-3 rounded-lg sm:rounded-xl m-1 sm:m-2 backdrop-blur-md 
+                       border border-white/10 shadow-lg transition-all duration-300
+                       hover:border-[#646cff]/20"
+            >
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+              </svg>
+            </motion.button>
+          </div>
+          
+          <div className="absolute inset-y-0 right-0 flex items-center">
+            <motion.button
+              whileHover={shouldReduceMotion ? {} : { 
+                scale: 1.1,
+                backgroundColor: 'rgba(26, 26, 26, 0.95)',
+                boxShadow: '0 8px 32px rgba(100, 108, 255, 0.15)'
+              }}
+              whileTap={shouldReduceMotion ? {} : { scale: 0.95 }}
+              onClick={nextSlide}
+              className="bg-[#1a1a1a]/60 text-white/90 p-2 sm:p-3 rounded-lg sm:rounded-xl m-1 sm:m-2 backdrop-blur-md 
+                       border border-white/10 shadow-lg transition-all duration-300
+                       hover:border-[#646cff]/20"
+            >
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+              </svg>
+            </motion.button>
+          </div>
+        </>
+      )}
 
       {/* Progress indicator */}
-      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center space-x-3 
-                      bg-[#1a1a1a]/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/10">
+      <div className="absolute bottom-2 sm:bottom-4 left-1/2 transform -translate-x-1/2 flex items-center space-x-2 sm:space-x-3 
+                    bg-[#1a1a1a]/40 backdrop-blur-md px-2 sm:px-4 py-1 sm:py-2 rounded-full border border-white/10">
         {Array.from({ length: Math.ceil(normalizedImages.length / itemsPerPage) }).map((_, index) => (
           <motion.button
             key={index}
             onClick={() => setCurrentIndex(index * itemsPerPage)}
-            className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+            className={`w-1.5 sm:w-2.5 h-1.5 sm:h-2.5 rounded-full transition-all duration-300 ${
               Math.floor(currentIndex / itemsPerPage) === index
                 ? 'bg-[#646cff] shadow-[0_0_10px_rgba(100,108,255,0.5)]'
                 : 'bg-white/30 hover:bg-white/50'

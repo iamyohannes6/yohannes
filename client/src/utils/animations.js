@@ -2,22 +2,21 @@
 export const fadeInUp = {
   initial: {
     opacity: 0,
-    y: 30,
+    y: 20,
   },
   animate: {
     opacity: 1,
     y: 0,
   },
   transition: {
-    duration: 0.6,
-    ease: [0.6, -0.05, 0.01, 0.99],
+    duration: 0.3,
   },
 };
 
 export const stagger = {
   animate: {
     transition: {
-      staggerChildren: 0.15,
+      staggerChildren: 0.1,
     },
   },
 };
@@ -25,22 +24,17 @@ export const stagger = {
 export const pageTransition = {
   initial: {
     opacity: 0,
-    y: 30,
   },
   animate: {
     opacity: 1,
-    y: 0,
     transition: {
-      duration: 0.6,
-      ease: [0.6, -0.05, 0.01, 0.99],
+      duration: 0.3,
     },
   },
   exit: {
     opacity: 0,
-    y: -30,
     transition: {
-      duration: 0.5,
-      ease: [0.6, -0.05, 0.01, 0.99],
+      duration: 0.2,
     },
   },
 };
@@ -50,7 +44,6 @@ export const performanceProps = {
   initial: false,
   style: {
     willChange: "transform, opacity",
-    transform: "translateZ(0)",
   },
 };
 
@@ -58,20 +51,18 @@ export const performanceProps = {
 export const reducedMotion = {
   initial: { opacity: 0 },
   animate: { opacity: 1 },
-  transition: { duration: 0.4 },
+  transition: { duration: 0.3 },
 };
 
-// New hover animation for cards
+// Optimized hover animation for cards
 export const hoverScale = {
+  initial: false,
   whileHover: {
-    scale: 1.03,
+    scale: 1.02,
     transition: {
       duration: 0.2,
       ease: "easeOut",
     },
-  },
-  whileTap: {
-    scale: 0.98,
   },
 };
 

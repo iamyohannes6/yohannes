@@ -2,6 +2,58 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePersonalInfo } from '../context/PersonalInfoContext';
 
+// Add this after the imports
+const ImageFilter = {
+  MIN_WIDTH: 500,
+  MIN_HEIGHT: 500,
+
+  FILTER_PATTERNS: [
+    'avatar', 'profile_', '/user/', 'userpic', 
+    'profile-pic', 'user-image', 'user_photo',
+    '/30x', '/50x', '/60x', '/75x', '/100x', 
+    '/140x', '/150x', '/200x', '/250x',
+    'small_', 'thumb_', 'thumbnail_', 'preview_', 
+    'mini_', 'tiny_', 'micro_'
+  ],
+
+  isValidImage(url) {
+    const lowercaseUrl = url.toLowerCase();
+    return !this.FILTER_PATTERNS.some(pattern => lowercaseUrl.includes(pattern)) &&
+           !/\/pin\/\d+\/avatar/.test(lowercaseUrl) &&
+           !lowercaseUrl.includes('/avatars/') &&
+           !lowercaseUrl.includes('/profile/') &&
+           !lowercaseUrl.includes('/users/') &&
+           !lowercaseUrl.includes('/user_');
+  },
+
+  filterImages(images) {
+    const validImages = images.filter(url => this.isValidImage(url));
+    return validImages.sort((a, b) => {
+      const highResIndicators = ['/originals/', '/full/', '/large/', '/max/'];
+      const aScore = highResIndicators.reduce((score, indicator) => 
+        a.includes(indicator) ? score + 100 : score, 0);
+      const bScore = highResIndicators.reduce((score, indicator) => 
+        b.includes(indicator) ? score + 100 : score, 0);
+      return bScore - aScore;
+    });
+  }
+};
+
+// Replace the extractPinterestImages function with this simpler utility
+const processImageLinks = (text) => {
+  return text.split('\n')
+    .map(url => url.trim())
+    .filter(url => url && (
+      url.includes('pinimg.com') || 
+      url.includes('pinterest.com') ||
+      url.includes('pin.it')
+    ))
+    .map(url => ({
+      url: url.replace(/\d+x\d+/, 'originals'),
+      caption: ''
+    }));
+};
+
 const AdminDashboard = () => {
   const { personalInfo, updatePersonalInfo, loading: contextLoading, error: contextError } = usePersonalInfo();
   const [activeTab, setActiveTab] = useState('personal');
@@ -15,10 +67,20 @@ const AdminDashboard = () => {
     education: [],
     services: [],
     skills: {},
-    galleries: []
+    pinterestBoards: []
   });
   const [message, setMessage] = useState({ type: '', content: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [collapsedBoards, setCollapsedBoards] = useState(() => {
+    // Initialize all boards as collapsed by default
+    const collapsed = {};
+    if (personalInfo?.pinterestBoards) {
+      personalInfo.pinterestBoards.forEach((_, index) => {
+        collapsed[index] = true;
+      });
+    }
+    return collapsed;
+  });
 
   useEffect(() => {
     if (personalInfo) {
@@ -154,13 +216,27 @@ const AdminDashboard = () => {
     setMessage({ type: '', content: '' });
 
     try {
-      const result = await updatePersonalInfo(formData);
+      // Prepare the data to be saved
+      const dataToSave = {
+        ...formData,
+        pinterestBoards: formData.pinterestBoards?.map(board => ({
+          name: board.name,
+          boardUrl: board.boardUrl,
+          images: board.images || [],
+          aspectRatio: board.aspectRatio || '16/9' // Ensure aspectRatio is saved
+        })) || []
+      };
+
+      console.log('Saving data to Firebase:', dataToSave);
+      const result = await updatePersonalInfo(dataToSave);
+      
       if (result.success) {
         setMessage({ type: 'success', content: 'Information updated successfully!' });
       } else {
         throw new Error(result.error || 'Failed to update information');
       }
     } catch (error) {
+      console.error('Error saving data:', error);
       setMessage({ type: 'error', content: error.message });
     } finally {
       setIsSubmitting(false);
@@ -203,6 +279,135 @@ const AdminDashboard = () => {
     });
   };
 
+  // Update the handleBulkImagePaste function
+  const handleBulkImagePaste = (boardIndex) => {
+    try {
+      navigator.clipboard.readText().then(text => {
+        const newImages = processImageLinks(text);
+
+        if (newImages.length > 0) {
+          const newBoards = [...(formData.pinterestBoards || [])];
+          newBoards[boardIndex] = {
+            ...newBoards[boardIndex],
+            images: [...(newBoards[boardIndex].images || []), ...newImages]
+          };
+          
+          setFormData(prev => ({ ...prev, pinterestBoards: newBoards }));
+          setMessage({ type: 'success', content: `Added ${newImages.length} image links!` });
+        } else {
+          setMessage({ type: 'error', content: 'No valid Pinterest image links found in clipboard' });
+        }
+      });
+    } catch (error) {
+      console.error('Error pasting images:', error);
+      setMessage({ 
+        type: 'error', 
+        content: 'Could not paste image links. Make sure you have copied the URLs.' 
+      });
+    }
+  };
+
+  // Add this function to handle adding a new Pinterest board
+  const addPinterestBoard = () => {
+    setFormData(prev => ({
+      ...prev,
+      pinterestBoards: [
+        ...(prev.pinterestBoards || []),
+        { 
+          name: '', 
+          boardUrl: '', 
+          images: [],
+          aspectRatio: '16/9' // Initialize with landscape aspect ratio
+        }
+      ]
+    }));
+    
+    // Set the new board as expanded by default
+    const newIndex = formData.pinterestBoards?.length || 0;
+    setCollapsedBoards(prev => ({
+      ...prev,
+      [newIndex]: false
+    }));
+  };
+
+  // Move handleFileImport inside the component
+  const handleFileImport = (boardIndex, file) => {
+    console.log('Starting file import for board:', boardIndex, 'file:', file.name);
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        console.log('File content:', event.target.result);
+        const jsonData = JSON.parse(event.target.result);
+        console.log('Parsed JSON:', jsonData);
+        
+        let links = [];
+        if (jsonData.links && Array.isArray(jsonData.links)) {
+          links = jsonData.links;
+        } else if (Array.isArray(jsonData)) {
+          links = jsonData;
+        } else {
+          links = jsonData.links || [];
+        }
+        
+        console.log('Extracted links:', links);
+
+        const newImages = links.map(link => ({
+          url: link.replace(/\/(\d+x|originals)\//, '/originals/'),
+          caption: ''
+        }));
+        
+        console.log('Processed images:', newImages);
+
+        if (newImages.length > 0) {
+          setFormData(prev => {
+            console.log('Previous formData:', prev);
+            const newBoards = [...(prev.pinterestBoards || [])];
+            if (!newBoards[boardIndex]) {
+              newBoards[boardIndex] = { name: '', boardUrl: '', images: [] };
+            }
+            newBoards[boardIndex] = {
+              ...newBoards[boardIndex],
+              images: [...(newBoards[boardIndex].images || []), ...newImages]
+            };
+            const newState = {
+              ...prev,
+              pinterestBoards: newBoards
+            };
+            console.log('New formData:', newState);
+            return newState;
+          });
+          
+          setMessage({ 
+            type: 'success', 
+            content: `Imported ${newImages.length} image links from ${file.name}!` 
+          });
+        } else {
+          setMessage({ 
+            type: 'error', 
+            content: 'No valid Pinterest image links found in the JSON file' 
+          });
+        }
+      } catch (error) {
+        console.error('Error processing file:', error);
+        setMessage({ 
+          type: 'error', 
+          content: 'Could not process file. Make sure it contains valid Pinterest image links.' 
+        });
+      }
+    };
+
+    reader.onerror = (error) => {
+      console.error('FileReader error:', error);
+      setMessage({
+        type: 'error',
+        content: 'Error reading the file. Please try again.'
+      });
+    };
+
+    reader.readAsText(file);
+  };
+
   if (contextLoading) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
@@ -229,7 +434,7 @@ const AdminDashboard = () => {
     { id: 'services', label: 'Services' },
     { id: 'skills', label: 'Skills' },
     { id: 'projects', label: 'Projects' },
-    { id: 'galleries', label: 'Galleries' },
+    { id: 'pinterest', label: 'Pinterest Boards' },
   ];
 
   return (
@@ -401,20 +606,20 @@ const AdminDashboard = () => {
                     >
                       <div className="absolute inset-0 bg-gradient-to-r from-[#646cff]/20 to-[#747bff]/20 rounded-lg blur opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                       <div className="relative space-y-2">
-                    <label htmlFor="github" className="block text-sm font-medium text-[#f5f5f5]">
-                      GitHub URL
-                    </label>
+                        <label htmlFor="email" className="block text-sm font-medium text-[#f5f5f5]">
+                          Email
+                        </label>
                         <motion.input
                           whileFocus={{ scale: 1.01 }}
-                      type="url"
-                      name="github"
-                      id="github"
-                      value={formData.social?.github || ''}
-                      onChange={(e) => handleSocialChange('github', e.target.value)}
+                          type="email"
+                          name="email"
+                          id="email"
+                          value={formData.social?.email || ''}
+                          onChange={(e) => handleSocialChange('email', e.target.value)}
                           className="block w-full rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
-                      placeholder="https://github.com/username"
-                    />
-                  </div>
+                          placeholder="your@email.com"
+                        />
+                      </div>
                     </motion.div>
 
                     <motion.div
@@ -423,23 +628,109 @@ const AdminDashboard = () => {
                     >
                       <div className="absolute inset-0 bg-gradient-to-r from-[#646cff]/20 to-[#747bff]/20 rounded-lg blur opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                       <div className="relative space-y-2">
-                    <label htmlFor="linkedin" className="block text-sm font-medium text-[#f5f5f5]">
-                      LinkedIn URL
-                    </label>
+                        <label htmlFor="github" className="block text-sm font-medium text-[#f5f5f5]">
+                          GitHub URL
+                        </label>
                         <motion.input
                           whileFocus={{ scale: 1.01 }}
-                      type="url"
-                      name="linkedin"
-                      id="linkedin"
-                      value={formData.social?.linkedin || ''}
-                      onChange={(e) => handleSocialChange('linkedin', e.target.value)}
+                          type="url"
+                          name="github"
+                          id="github"
+                          value={formData.social?.github || ''}
+                          onChange={(e) => handleSocialChange('github', e.target.value)}
                           className="block w-full rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
-                      placeholder="https://linkedin.com/in/username"
-                    />
-                  </div>
+                          placeholder="https://github.com/username"
+                        />
+                      </div>
                     </motion.div>
 
-                    {/* Add similar styling for other social inputs */}
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      className="group relative"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-[#646cff]/20 to-[#747bff]/20 rounded-lg blur opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      <div className="relative space-y-2">
+                        <label htmlFor="linkedin" className="block text-sm font-medium text-[#f5f5f5]">
+                          LinkedIn URL
+                        </label>
+                        <motion.input
+                          whileFocus={{ scale: 1.01 }}
+                          type="url"
+                          name="linkedin"
+                          id="linkedin"
+                          value={formData.social?.linkedin || ''}
+                          onChange={(e) => handleSocialChange('linkedin', e.target.value)}
+                          className="block w-full rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
+                          placeholder="https://linkedin.com/in/username"
+                        />
+                      </div>
+                    </motion.div>
+
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      className="group relative"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-[#646cff]/20 to-[#747bff]/20 rounded-lg blur opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      <div className="relative space-y-2">
+                        <label htmlFor="twitter" className="block text-sm font-medium text-[#f5f5f5]">
+                          Twitter URL
+                        </label>
+                        <motion.input
+                          whileFocus={{ scale: 1.01 }}
+                          type="url"
+                          name="twitter"
+                          id="twitter"
+                          value={formData.social?.twitter || ''}
+                          onChange={(e) => handleSocialChange('twitter', e.target.value)}
+                          className="block w-full rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
+                          placeholder="https://twitter.com/username"
+                        />
+                      </div>
+                    </motion.div>
+
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      className="group relative"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-[#646cff]/20 to-[#747bff]/20 rounded-lg blur opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      <div className="relative space-y-2">
+                        <label htmlFor="instagram" className="block text-sm font-medium text-[#f5f5f5]">
+                          Instagram URL
+                        </label>
+                        <motion.input
+                          whileFocus={{ scale: 1.01 }}
+                          type="url"
+                          name="instagram"
+                          id="instagram"
+                          value={formData.social?.instagram || ''}
+                          onChange={(e) => handleSocialChange('instagram', e.target.value)}
+                          className="block w-full rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
+                          placeholder="https://instagram.com/username"
+                        />
+                      </div>
+                    </motion.div>
+
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      className="group relative"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-[#646cff]/20 to-[#747bff]/20 rounded-lg blur opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      <div className="relative space-y-2">
+                        <label htmlFor="pinterest" className="block text-sm font-medium text-[#f5f5f5]">
+                          Pinterest URL
+                        </label>
+                        <motion.input
+                          whileFocus={{ scale: 1.01 }}
+                          type="url"
+                          name="pinterest"
+                          id="pinterest"
+                          value={formData.social?.pinterest || ''}
+                          onChange={(e) => handleSocialChange('pinterest', e.target.value)}
+                          className="block w-full rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
+                          placeholder="https://pinterest.com/username"
+                        />
+                      </div>
+                    </motion.div>
                   </div>
                 </div>
 
@@ -967,13 +1258,13 @@ const AdminDashboard = () => {
                                 whileTap={{ scale: 0.9 }}
                             type="button"
                                 onClick={() => removeSkill(category, index)}
-                                className="p-2 rounded-full bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all duration-300"
+                                className="p-2 rounded-full bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all duration-300 self-end"
                               >
                                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                 </svg>
                               </motion.button>
-                        </div>
+                            </div>
                           </motion.div>
                         ))}
                       </div>
@@ -996,7 +1287,7 @@ const AdminDashboard = () => {
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                        type="button"
+                    type="button"
                     onClick={addProject}
                     className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#646cff] text-white hover:bg-[#747bff] transition-all duration-300"
                   >
@@ -1005,7 +1296,7 @@ const AdminDashboard = () => {
                     </svg>
                     Add Project
                   </motion.button>
-                    </div>
+                </div>
 
                 <motion.div layout className="space-y-6">
                   {formData.projects?.map((project, index) => (
@@ -1032,7 +1323,7 @@ const AdminDashboard = () => {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                             </svg>
                           </motion.button>
-                  </div>
+                        </div>
 
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                           <div>
@@ -1045,7 +1336,7 @@ const AdminDashboard = () => {
                               className="block w-full rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
                               placeholder="Project Title"
                             />
-              </div>
+                          </div>
 
                           <div>
                             <label className="block text-sm font-medium text-[#f5f5f5] mb-2">Image URL</label>
@@ -1114,182 +1405,257 @@ const AdminDashboard = () => {
               </motion.div>
             )}
 
-            {/* Galleries Section */}
-            {activeTab === 'galleries' && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="space-y-8"
-              >
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg font-medium bg-clip-text text-transparent bg-gradient-to-r from-[#f5f5f5] via-[#646cff] to-[#f5f5f5]">Galleries</h3>
+            {/* Pinterest Boards Section */}
+            {activeTab === 'pinterest' && (
+              <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-medium text-[#f5f5f5]">Pinterest Boards</h3>
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     type="button"
-                    onClick={() => setFormData(prev => ({
-                      ...prev,
-                      galleries: [...(prev.galleries || []), { name: '', images: [] }]
-                    }))}
+                    onClick={addPinterestBoard}
                     className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#646cff] text-white hover:bg-[#747bff] transition-all duration-300"
                   >
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
-                    Add Gallery
+                    Add Board
                   </motion.button>
                 </div>
 
-                <motion.div layout className="space-y-6">
-                {formData.galleries?.map((gallery, galleryIndex) => (
+                <AnimatePresence>
+                  {formData.pinterestBoards?.map((board, boardIndex) => (
                     <motion.div
-                      key={galleryIndex}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      className="group relative bg-gradient-to-br from-[#ffffff0d] to-[#ffffff05] p-6 rounded-xl border border-[#ffffff1a] hover:border-[#646cff] transition-all duration-300"
+                      key={boardIndex}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.2 }}
+                      className="bg-gradient-to-br from-[#ffffff0d] to-[#ffffff05] p-6 rounded-xl border border-[#ffffff1a]"
+                      style={{ willChange: 'transform, opacity' }}
                     >
-                      <div className="absolute inset-0 bg-gradient-to-r from-[#646cff]/5 to-[#747bff]/5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                      
-                      <div className="relative space-y-4">
+                      <div className="space-y-4">
                         <div className="flex justify-between items-center">
-                          <h4 className="text-base font-medium text-[#f5f5f5]">Gallery {galleryIndex + 1}</h4>
+                          <div className="flex items-center gap-4">
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setCollapsedBoards(prev => ({
+                                  ...prev,
+                                  [boardIndex]: !prev[boardIndex]
+                                }));
+                              }}
+                              className="p-2 rounded-lg bg-[#ffffff1a] text-[#f5f5f5] hover:bg-[#ffffff2a] transition-all duration-300"
+                            >
+                              <svg 
+                                className={`w-5 h-5 transform transition-transform duration-200 ${
+                                  collapsedBoards[boardIndex] ? 'rotate-180' : ''
+                                }`} 
+                                fill="none" 
+                                viewBox="0 0 24 24" 
+                                stroke="currentColor"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </motion.button>
+                            <h4 className="text-base font-medium text-[#f5f5f5]">
+                              {board.name || `Board ${boardIndex + 1}`}
+                              <span className="ml-2 text-sm text-[#f5f5f5]/60">
+                                ({board.images?.length || 0} images)
+                              </span>
+                            </h4>
+                          </div>
                           <motion.button
                             whileHover={{ scale: 1.1 }}
                             whileTap={{ scale: 0.9 }}
-                        type="button"
-                        onClick={() => {
-                              const newGalleries = [...(formData.galleries || [])];
-                              newGalleries.splice(galleryIndex, 1);
-                          setFormData(prev => ({ ...prev, galleries: newGalleries }));
-                        }}
+                            type="button"
+                            onClick={() => {
+                              const newBoards = [...(formData.pinterestBoards || [])];
+                              newBoards.splice(boardIndex, 1);
+                              setFormData(prev => ({ ...prev, pinterestBoards: newBoards }));
+                            }}
                             className="p-2 rounded-full bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all duration-300"
                           >
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                             </svg>
                           </motion.button>
-                    </div>
+                        </div>
 
-                    <div className="space-y-4">
-                          <div>
-                            <label className="block text-sm font-medium text-[#f5f5f5] mb-2">Gallery Name</label>
-                            <motion.input
-                              whileFocus={{ scale: 1.01 }}
-                              type="text"
-                              value={gallery.name}
-                              onChange={e => {
-                                const newGalleries = [...(formData.galleries || [])];
-                                newGalleries[galleryIndex] = { ...gallery, name: e.target.value };
-                            setFormData(prev => ({ ...prev, galleries: newGalleries }));
-                          }}
-                              className="block w-full rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
-                              placeholder="Gallery Name"
-                            />
-                      </div>
-
-                          <div>
-                            <div className="flex items-center justify-between mb-4">
-                              <label className="block text-sm font-medium text-[#f5f5f5]">Images</label>
-                              <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                              type="button"
-                              onClick={() => {
-                                  const newGalleries = [...(formData.galleries || [])];
-                                  newGalleries[galleryIndex] = {
-                                    ...gallery,
-                                    images: [...(gallery.images || []), { url: '', caption: '' }]
-                                  };
-                                setFormData(prev => ({ ...prev, galleries: newGalleries }));
+                        <AnimatePresence mode="wait">
+                          {!collapsedBoards[boardIndex] && (
+                            <motion.div
+                              key={`board-content-${boardIndex}`}
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ 
+                                duration: 0.2,
+                                ease: "easeInOut",
+                                opacity: { duration: 0.1 }
                               }}
-                                className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#646cff] text-white hover:bg-[#747bff] transition-all duration-300"
-                              >
-                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                </svg>
-                                Add Image
-                              </motion.button>
-                          </div>
+                              className="overflow-hidden"
+                              style={{ willChange: 'height, opacity' }}
+                            >
+                              <div className="space-y-4 pt-4">
+                                <div>
+                                  <label className="block text-sm font-medium text-[#f5f5f5] mb-2">Board Name</label>
+                                  <motion.input
+                                    whileFocus={{ scale: 1.01 }}
+                                    type="text"
+                                    value={board.name}
+                                    onChange={e => {
+                                      const newBoards = [...(formData.pinterestBoards || [])];
+                                      newBoards[boardIndex] = { ...board, name: e.target.value };
+                                      setFormData(prev => ({ ...prev, pinterestBoards: newBoards }));
+                                    }}
+                                    className="block w-full rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
+                                    placeholder="My Pinterest Board"
+                                  />
+                                </div>
 
-                            <div className="grid grid-cols-1 gap-4">
-                              {gallery.images?.map((image, imageIndex) => (
-                                <motion.div
-                                  key={imageIndex}
-                                  initial={{ opacity: 0, scale: 0.9 }}
-                                  animate={{ opacity: 1, scale: 1 }}
-                                  exit={{ opacity: 0, scale: 0.9 }}
-                                  className="group relative bg-gradient-to-br from-[#ffffff0d] to-[#ffffff05] p-4 rounded-lg border border-[#ffffff1a] hover:border-[#646cff] transition-all duration-300"
-                                >
-                                  <div className="absolute inset-0 bg-gradient-to-r from-[#646cff]/5 to-[#747bff]/5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                                  <div className="relative grid grid-cols-1 gap-4 sm:grid-cols-2">
-                          <div>
-                                      <label className="block text-sm font-medium text-[#f5f5f5] mb-2">Image URL</label>
-                                      <motion.input
-                                        whileFocus={{ scale: 1.01 }}
-                                        type="text"
-                              value={image.url}
-                              onChange={e => {
-                                          const newGalleries = [...(formData.galleries || [])];
-                                          newGalleries[galleryIndex].images[imageIndex] = {
-                                            ...image,
-                                            url: e.target.value
-                                          };
-                                setFormData(prev => ({ ...prev, galleries: newGalleries }));
-                              }}
-                                        className="block w-full rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
-                              placeholder="https://example.com/image.jpg"
-                            />
-                          </div>
+                                <div>
+                                  <label className="block text-sm font-medium text-[#f5f5f5] mb-2">Card Size</label>
+                                  <div className="grid grid-cols-3 gap-4">
+                                    <motion.button
+                                      whileHover={{ scale: 1.05 }}
+                                      whileTap={{ scale: 0.95 }}
+                                      type="button"
+                                      onClick={() => {
+                                        const newBoards = [...(formData.pinterestBoards || [])];
+                                        newBoards[boardIndex] = { ...board, aspectRatio: '1/1' };
+                                        setFormData(prev => ({ ...prev, pinterestBoards: newBoards }));
+                                      }}
+                                      className={`p-3 rounded-lg border ${
+                                        board.aspectRatio === '1/1' ? 'bg-[#646cff] border-[#646cff]' : 'bg-[#ffffff0d] border-[#ffffff1a]'
+                                      } text-[#f5f5f5] transition-all duration-300`}
+                                    >
+                                      Square
+                                    </motion.button>
+                                    <motion.button
+                                      whileHover={{ scale: 1.05 }}
+                                      whileTap={{ scale: 0.95 }}
+                                      type="button"
+                                      onClick={() => {
+                                        const newBoards = [...(formData.pinterestBoards || [])];
+                                        newBoards[boardIndex] = { ...board, aspectRatio: '16/9' };
+                                        setFormData(prev => ({ ...prev, pinterestBoards: newBoards }));
+                                      }}
+                                      className={`p-3 rounded-lg border ${
+                                        board.aspectRatio === '16/9' ? 'bg-[#646cff] border-[#646cff]' : 'bg-[#ffffff0d] border-[#ffffff1a]'
+                                      } text-[#f5f5f5] transition-all duration-300`}
+                                    >
+                                      Landscape
+                                    </motion.button>
+                                    <motion.button
+                                      whileHover={{ scale: 1.05 }}
+                                      whileTap={{ scale: 0.95 }}
+                                      type="button"
+                                      onClick={() => {
+                                        const newBoards = [...(formData.pinterestBoards || [])];
+                                        newBoards[boardIndex] = { ...board, aspectRatio: '9/16' };
+                                        setFormData(prev => ({ ...prev, pinterestBoards: newBoards }));
+                                      }}
+                                      className={`p-3 rounded-lg border ${
+                                        board.aspectRatio === '9/16' ? 'bg-[#646cff] border-[#646cff]' : 'bg-[#ffffff0d] border-[#ffffff1a]'
+                                      } text-[#f5f5f5] transition-all duration-300`}
+                                    >
+                                      Portrait
+                                    </motion.button>
+                                  </div>
+                                </div>
 
-                                    <div className="flex items-center gap-4">
-                                      <div className="flex-1">
-                                        <label className="block text-sm font-medium text-[#f5f5f5] mb-2">Caption</label>
-                                        <motion.input
-                                          whileFocus={{ scale: 1.01 }}
-                              type="text"
-                              value={image.caption}
-                              onChange={e => {
-                                            const newGalleries = [...(formData.galleries || [])];
-                                            newGalleries[galleryIndex].images[imageIndex] = {
-                                              ...image,
-                                              caption: e.target.value
-                                            };
-                                setFormData(prev => ({ ...prev, galleries: newGalleries }));
-                              }}
-                                          className="block w-full rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
-                              placeholder="Image caption"
-                            />
-                          </div>
-
-                                      <motion.button
-                                        whileHover={{ scale: 1.1 }}
-                                        whileTap={{ scale: 0.9 }}
-                                        type="button"
-                                        onClick={() => {
-                                          const newGalleries = [...(formData.galleries || [])];
-                                          newGalleries[galleryIndex].images.splice(imageIndex, 1);
-                                          setFormData(prev => ({ ...prev, galleries: newGalleries }));
+                                <div>
+                                  <label className="block text-sm font-medium text-[#f5f5f5] mb-2">Board URL (for reference only)</label>
+                                  <div className="flex gap-2">
+                                    <motion.input
+                                      whileFocus={{ scale: 1.01 }}
+                                      type="url"
+                                      value={board.boardUrl}
+                                      onChange={e => {
+                                        const newBoards = [...(formData.pinterestBoards || [])];
+                                        newBoards[boardIndex] = { ...board, boardUrl: e.target.value };
+                                        setFormData(prev => ({ ...prev, pinterestBoards: newBoards }));
+                                      }}
+                                      className="block flex-1 rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
+                                      placeholder="https://pinterest.com/username/board-name"
+                                    />
+                                    <motion.button
+                                      whileHover={{ scale: 1.05 }}
+                                      whileTap={{ scale: 0.95 }}
+                                      type="button"
+                                      onClick={() => handleBulkImagePaste(boardIndex)}
+                                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#646cff] text-white hover:bg-[#747bff] transition-all duration-300"
+                                    >
+                                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                      </svg>
+                                      Paste Links
+                                    </motion.button>
+                                    <label className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#646cff] text-white hover:bg-[#747bff] cursor-pointer transition-all duration-300">
+                                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                      </svg>
+                                      <span>Import File</span>
+                                      <input
+                                        type="file"
+                                        accept=".json,.txt"
+                                        className="hidden"
+                                        onChange={(e) => {
+                                          const file = e.target.files?.[0];
+                                          if (file) {
+                                            handleFileImport(boardIndex, file);
+                                            e.target.value = ''; // Reset input
+                                          }
                                         }}
-                                        className="p-2 rounded-full bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all duration-300 self-end"
-                                      >
-                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
-                                      </motion.button>
+                                      />
+                                    </label>
+                                  </div>
+                                  <p className="mt-2 text-sm text-[#f5f5f5]/60">
+                                    Import a JSON or TXT file containing Pinterest image links from the Pinterest Downloader extension
+                                  </p>
+                                </div>
+
+                                <div>
+                                  <div className="flex items-center justify-between mb-4">
+                                    <label className="block text-sm font-medium text-[#f5f5f5]">Image Links ({board.images?.length || 0})</label>
+                                  </div>
+                                  <div className="space-y-4">
+                                    {board.images?.map((image, imageIndex) => (
+                                      <div key={imageIndex} className="flex items-center gap-4 bg-[#ffffff0d] p-4 rounded-lg">
+                                        <div className="flex-1 truncate">{image.url}</div>
+                                        <motion.button
+                                          whileHover={{ scale: 1.1 }}
+                                          whileTap={{ scale: 0.9 }}
+                                          type="button"
+                                          onClick={() => {
+                                            const newBoards = [...(formData.pinterestBoards || [])];
+                                            newBoards[boardIndex].images.splice(imageIndex, 1);
+                                            setFormData(prev => ({ ...prev, pinterestBoards: newBoards }));
+                                          }}
+                                          className="p-2 rounded-full bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all duration-300"
+                                        >
+                                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                          </svg>
+                                        </motion.button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-                                </motion.div>
-                      ))}
-                    </div>
-                  </div>
-              </div>
-                </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
                     </motion.div>
                   ))}
-                </motion.div>
-              </motion.div>
+                </AnimatePresence>
+              </div>
             )}
 
             {/* Save Button */}

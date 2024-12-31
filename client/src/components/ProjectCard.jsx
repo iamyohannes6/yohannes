@@ -1,21 +1,36 @@
-import { motion } from 'framer-motion';
-import { hoverScale } from '../utils/animations';
+import { motion, useReducedMotion } from 'framer-motion';
 
 const ProjectCard = ({ project }) => {
+  const shouldReduceMotion = useReducedMotion();
+
+  const cardVariants = shouldReduceMotion
+    ? {
+        hover: {},
+      }
+    : {
+        hover: {
+          scale: 1.02,
+          transition: {
+            duration: 0.2,
+            ease: "easeOut",
+          },
+        },
+      };
+
   return (
     <motion.div
-      {...hoverScale}
+      variants={cardVariants}
+      whileHover="hover"
       className="flex flex-col overflow-hidden rounded-2xl bg-[#1a1a1a] shadow-lg transition-colors duration-300 hover:bg-[#242424]"
+      style={{ willChange: 'transform' }}
     >
       {project.image && (
         <div className="relative h-48 overflow-hidden">
-          <motion.img
-            initial={{ scale: 1.2 }}
-            animate={{ scale: 1 }}
-            transition={{ duration: 0.6, ease: [0.6, -0.05, 0.01, 0.99] }}
+          <img
             src={project.image}
             alt={project.title}
             className="h-full w-full object-cover"
+            loading="lazy"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[#1a1a1a] via-transparent to-transparent" />
         </div>
@@ -23,22 +38,13 @@ const ProjectCard = ({ project }) => {
       
       <div className="flex flex-1 flex-col justify-between p-6">
         <div className="flex-1">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
+          <div>
             <h3 className="text-xl font-semibold text-[#f5f5f5]">{project.title}</h3>
             <p className="mt-3 text-base text-[#ffffffb3]">{project.description}</p>
-          </motion.div>
+          </div>
           
           {project.tags && (
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
-              className="mt-4 flex flex-wrap gap-2"
-            >
+            <div className="mt-4 flex flex-wrap gap-2">
               {project.tags.map((tag, index) => (
                 <span
                   key={index}
@@ -47,39 +53,9 @@ const ProjectCard = ({ project }) => {
                   {tag}
                 </span>
               ))}
-            </motion.div>
+            </div>
           )}
         </div>
-        
-        {(project.demoUrl || project.githubUrl) && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="mt-6 flex items-center gap-4"
-          >
-            {project.demoUrl && (
-              <a
-                href={project.demoUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[#646cff] hover:text-[#747bff] transition-colors duration-200"
-              >
-                View Demo
-              </a>
-            )}
-            {project.githubUrl && (
-              <a
-                href={project.githubUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[#646cff] hover:text-[#747bff] transition-colors duration-200"
-              >
-                View Code
-              </a>
-            )}
-          </motion.div>
-        )}
       </div>
     </motion.div>
   );

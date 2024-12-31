@@ -1,15 +1,18 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Outlet, useLocation, NavLink } from 'react-router-dom'
 import { XMarkIcon, Bars3Icon } from '@heroicons/react/24/outline'
-import { AnimatePresence, motion, useScroll, useTransform, useSpring } from 'framer-motion'
+import { AnimatePresence, motion, useScroll, useTransform, useSpring, useReducedMotion } from 'framer-motion'
+import { performanceProps } from '../utils/animations'
 
 export default function Layout({ children }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const location = useLocation()
   const { scrollY } = useScroll()
+  const shouldReduceMotion = useReducedMotion()
 
-  const backgroundY = useTransform(scrollY, [0, 500], [0, 150])
+  // Optimized scroll transforms
+  const backgroundY = useTransform(scrollY, [0, 500], [0, shouldReduceMotion ? 0 : 150])
   const backgroundOpacity = useTransform(scrollY, [0, 300], [1, 0.5])
   const springConfig = { damping: 15, stiffness: 100 }
   const backgroundYSpring = useSpring(backgroundY, springConfig)
@@ -21,21 +24,46 @@ export default function Layout({ children }) {
     { name: 'Contact', href: '/contact' },
   ]
 
-  useEffect(() => {
-    const handleScroll = () => {
-      const isScrolled = window.scrollY > 20
-      setScrolled(isScrolled)
-    }
-
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
+  // Memoized scroll handler
+  const handleScroll = useCallback(() => {
+    const isScrolled = window.scrollY > 20
+    setScrolled(isScrolled)
   }, [])
+
+  useEffect(() => {
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [handleScroll])
+
+  // Optimized animation variants
+  const mobileMenuVariants = {
+    closed: { x: "100%" },
+    open: { x: 0 },
+  }
+
+  const navItemVariants = shouldReduceMotion
+    ? {
+        hover: {},
+      }
+    : {
+        hover: { y: -2 },
+      }
+
+  const linkUnderlineVariants = shouldReduceMotion
+    ? {
+        hover: {},
+      }
+    : {
+        initial: { width: 0, left: "50%" },
+        hover: { width: "50%", left: "25%" },
+      }
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] overflow-hidden">
       {/* Parallax Background */}
       <div className="fixed inset-0 -z-10">
         <motion.div 
+          {...performanceProps}
           className="absolute inset-0 bg-[linear-gradient(to_right,#080808_1px,transparent_1px),linear-gradient(to_bottom,#080808_1px,transparent_1px)] bg-[size:14px_24px]"
           style={{
             y: backgroundYSpring,
@@ -45,72 +73,68 @@ export default function Layout({ children }) {
           }}
         />
         <motion.div 
+          {...performanceProps}
           className="absolute inset-0"
           style={{
-            y: useSpring(useTransform(scrollY, [0, 500], [0, -50]), springConfig),
+            y: useSpring(useTransform(scrollY, [0, 500], [0, shouldReduceMotion ? 0 : -50]), springConfig),
             background: 'radial-gradient(circle 800px at 100% 200px, #646cff15, transparent), radial-gradient(circle 800px at 0% 300px, #747bff15, transparent)'
           }}
         />
       </div>
 
       {/* Navigation */}
-      <nav className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${
-        scrolled ? 'bg-[#0a0a0a]/95 backdrop-blur-md shadow-lg shadow-black/5' : ''
+      <nav className={`fixed inset-x-0 top-0 z-50 transition-all duration-500 ${
+        scrolled 
+          ? 'bg-[#0a0a0a]/85 backdrop-blur-xl shadow-lg shadow-black/5 border-b border-white/5' 
+          : 'bg-transparent'
       }`}>
         <div className="relative">
-          {/* Navbar Background with Blur and Border */}
-          <div className={`absolute inset-0 transition-opacity duration-300 ${
+          <div className={`absolute inset-0 transition-opacity duration-500 ${
             scrolled ? 'opacity-100' : 'opacity-0'
-          } border-b border-[#ffffff1a] after:absolute after:inset-0 after:bg-gradient-to-r after:from-[#646cff]/10 after:via-transparent after:to-[#747bff]/10`} />
+          } after:absolute after:inset-0 after:bg-gradient-to-r after:from-[#646cff]/10 after:via-transparent after:to-[#747bff]/10`} />
           
-          {/* Navbar Content */}
           <div className="relative mx-auto max-w-7xl px-6 lg:px-8">
             <div className="flex h-16 items-center justify-between">
-              {/* Logo */}
               <div className="flex lg:flex-1">
-                <NavLink
-                  to="/"
-                  className="relative group -m-1.5 p-1.5"
-                >
-                  <motion.span 
-                    className="text-xl font-bold tracking-tight text-[#f5f5f5] transition-colors group-hover:text-[#646cff]"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
+                <NavLink to="/" className="relative group -m-1.5 p-1.5">
+                  <span className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-[#f5f5f5] to-[#646cff] transition-all duration-300 group-hover:to-[#747bff]">
                     Yohannes
-                  </motion.span>
-                  <motion.span 
-                    className="absolute -bottom-0.5 left-1/2 w-0 h-[2px] bg-[#646cff]"
-                    initial={{ width: 0, left: "50%" }}
-                    whileHover={{ width: "50%", left: "25%" }}
-                    transition={{ duration: 0.3 }}
-                  />
+                  </span>
+                  {!shouldReduceMotion && (
+                    <motion.span 
+                      className="absolute -bottom-0.5 left-1/2 w-0 h-[2px] bg-gradient-to-r from-[#646cff] to-[#747bff]"
+                      variants={linkUnderlineVariants}
+                      initial="initial"
+                      whileHover="hover"
+                      transition={{ duration: 0.3 }}
+                    />
+                  )}
                 </NavLink>
               </div>
 
-              {/* Mobile menu button */}
-              <motion.div 
-                className="flex lg:hidden"
-                whileTap={{ scale: 0.95 }}
-              >
-                <button
+              <div className="flex lg:hidden">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   type="button"
-                  className="-m-2.5 inline-flex items-center justify-center rounded-lg p-2.5 text-[#f5f5f5] transition-all hover:bg-[#ffffff0d] hover:text-[#646cff]"
+                  className="relative -m-2.5 inline-flex items-center justify-center rounded-lg p-2.5 text-[#f5f5f5]"
                   onClick={() => setMobileMenuOpen(true)}
                 >
                   <span className="sr-only">Open main menu</span>
-                  <Bars3Icon className="h-6 w-6" aria-hidden="true" />
-                </button>
-              </motion.div>
+                  <div className="relative">
+                    <Bars3Icon className="h-6 w-6" aria-hidden="true" />
+                    <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#646cff]/20 to-[#747bff]/20 blur-lg opacity-0 transition-opacity duration-300 hover:opacity-100" />
+                  </div>
+                </motion.button>
+              </div>
 
-              {/* Desktop navigation */}
               <div className="hidden lg:flex lg:gap-x-8">
                 {navigation.map((item) => (
                   <NavLink
                     key={item.name}
                     to={item.href}
                     className={({ isActive }) =>
-                      `group relative px-3 py-2 text-sm font-semibold transition-all ${
+                      `group relative px-3 py-2 text-sm font-semibold transition-all duration-300 ${
                         isActive
                           ? 'text-[#646cff]'
                           : 'text-[#f5f5f5] hover:text-[#646cff]'
@@ -118,12 +142,22 @@ export default function Layout({ children }) {
                     }
                   >
                     <motion.span
-                      initial={{ y: 0 }}
-                      whileHover={{ y: -2 }}
+                      variants={navItemVariants}
+                      whileHover="hover"
                       transition={{ duration: 0.2 }}
+                      className="relative z-10"
                     >
                       {item.name}
                     </motion.span>
+                    {!shouldReduceMotion && (
+                      <motion.span 
+                        className={`absolute inset-0 rounded-lg -z-10 ${
+                          location.pathname === item.href
+                            ? 'bg-[#646cff]/10'
+                            : 'bg-gradient-to-r from-[#646cff]/0 to-[#747bff]/0 hover:from-[#646cff]/10 hover:to-[#747bff]/10'
+                        } transition-colors duration-300`}
+                      />
+                    )}
                     <motion.span 
                       className={`absolute inset-x-3 -bottom-px h-[2px] transform ${
                         location.pathname === item.href
@@ -136,233 +170,129 @@ export default function Layout({ children }) {
                 ))}
               </div>
 
-              {/* Hire me button */}
               <div className="hidden lg:flex lg:flex-1 lg:justify-end">
-                <motion.a
+                <a
                   href="https://www.linkedin.com/in/yohannes-goitom-1b29022ab"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="group relative overflow-hidden rounded-full bg-[#646cff] px-4 py-1.5 transition-all duration-300 hover:bg-[#747bff]"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
                 >
                   <div className="relative flex items-center gap-x-2">
-                    <motion.span 
-                      className="text-sm font-semibold text-white"
-                      initial={{ x: 0 }}
-                      whileHover={{ x: -2 }}
-                    >
+                    <span className="text-sm font-semibold text-white transition-transform duration-200 group-hover:-translate-x-1">
                       Hire me
-                    </motion.span>
-                    <motion.svg
-                      className="h-5 w-5 text-white"
+                    </span>
+                    <svg
+                      className="h-5 w-5 text-white transition-transform duration-200 group-hover:translate-x-1"
                       fill="none"
                       viewBox="0 0 24 24"
                       strokeWidth="2"
                       stroke="currentColor"
-                      initial={{ x: 0 }}
-                      whileHover={{ x: 2 }}
                     >
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3"
                       />
-                    </motion.svg>
+                    </svg>
                   </div>
-                  <motion.div 
-                    className="absolute inset-0 -z-10 bg-gradient-to-r from-[#646cff] via-[#747bff] to-[#646cff]"
-                    initial={{ opacity: 0, x: "-100%" }}
-                    whileHover={{ opacity: 1, x: "0%" }}
-                    transition={{ duration: 0.3 }}
-                  />
-                </motion.a>
+                  {!shouldReduceMotion && (
+                    <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#646cff] via-[#747bff] to-[#646cff] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                  )}
+                </a>
               </div>
             </div>
           </div>
         </div>
 
         {/* Mobile menu */}
-        <AnimatePresence>
+        <AnimatePresence mode="wait">
           {mobileMenuOpen && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-50 lg:hidden"
-              aria-modal="true"
-            >
-              {/* Background overlay */}
+            <>
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
-                className="fixed inset-0 bg-[#0a0a0a]/80 backdrop-blur-md"
+                className="fixed inset-0 bg-[#0a0a0a]/90 backdrop-blur-xl"
                 onClick={() => setMobileMenuOpen(false)}
               />
 
-              {/* Menu panel */}
               <motion.div
-                initial={{ x: "100%" }}
-                animate={{ x: 0 }}
-                exit={{ x: "100%" }}
+                variants={mobileMenuVariants}
+                initial="closed"
+                animate="open"
+                exit="closed"
                 transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                className="fixed inset-y-0 right-0 w-full max-w-xs bg-[#0a0a0a] p-6"
+                className="fixed inset-y-0 right-0 w-full max-w-xs bg-[#0a0a0a]/95 backdrop-blur-xl p-6 border-l border-white/5"
               >
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between mb-8">
                   <NavLink
                     to="/"
                     className="group relative -m-1.5 p-1.5"
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    <motion.span 
-                      className="text-xl font-bold tracking-tight text-[#f5f5f5] transition-colors group-hover:text-[#646cff]"
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
+                    <span className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-[#f5f5f5] to-[#646cff] transition-all duration-300 group-hover:to-[#747bff]">
                       Yohannes
-                    </motion.span>
-                    <motion.span 
-                      className="absolute -bottom-0.5 left-1/2 w-0 h-[2px] bg-[#646cff]"
-                      initial={{ width: 0, left: "50%" }}
-                      whileHover={{ width: "50%", left: "25%" }}
-                      transition={{ duration: 0.3 }}
-                    />
+                    </span>
                   </NavLink>
                   <motion.button
+                    whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     type="button"
-                    className="-m-2.5 rounded-lg p-2.5 text-[#f5f5f5] transition-colors hover:bg-[#ffffff0d] hover:text-[#646cff]"
+                    className="relative -m-2.5 rounded-lg p-2.5 text-[#f5f5f5]"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     <span className="sr-only">Close menu</span>
-                    <XMarkIcon className="h-6 w-6" aria-hidden="true" />
+                    <div className="relative">
+                      <XMarkIcon className="h-6 w-6" aria-hidden="true" />
+                      <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#646cff]/20 to-[#747bff]/20 blur-lg opacity-0 transition-opacity duration-300 hover:opacity-100" />
+                    </div>
                   </motion.button>
                 </div>
-                <div className="mt-6 flow-root">
-                  <div className="space-y-2 py-6">
+
+                <nav className="flow-root">
+                  <div className="space-y-2">
                     {navigation.map((item) => (
-                      <motion.div
+                      <NavLink
                         key={item.name}
-                        initial={{ x: 20, opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
-                        transition={{ duration: 0.3 }}
+                        to={item.href}
+                        className={({ isActive }) =>
+                          `block relative overflow-hidden rounded-lg px-4 py-3 text-base font-semibold transition-all duration-300 ${
+                            isActive
+                              ? 'text-[#646cff] bg-[#646cff]/10'
+                              : 'text-[#f5f5f5] hover:text-[#646cff] hover:bg-[#ffffff0d]'
+                          }`
+                        }
+                        onClick={() => setMobileMenuOpen(false)}
                       >
-                        <NavLink
-                          to={item.href}
-                          className={({ isActive }) =>
-                            `group relative block rounded-lg px-3 py-2 text-base font-semibold transition-all ${
-                              isActive
-                                ? 'text-[#646cff] bg-[#646cff15]'
-                                : 'text-[#f5f5f5] hover:text-[#646cff] hover:bg-[#646cff15]'
-                            }`
-                          }
-                          onClick={() => setMobileMenuOpen(false)}
+                        <motion.span
+                          whileHover={{ x: 8 }}
+                          transition={{ duration: 0.2 }}
+                          className="relative z-10 flex items-center"
                         >
-                          <motion.div 
-                            className="flex items-center justify-between"
-                            whileHover={{ x: 5 }}
+                          {item.name}
+                          <motion.svg 
+                            className="ml-2 w-4 h-4 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                            fill="none" 
+                            viewBox="0 0 24 24" 
+                            stroke="currentColor"
                           >
-                            <span>{item.name}</span>
-                            {location.pathname === item.href && (
-                              <motion.svg 
-                                className="h-5 w-5"
-                                viewBox="0 0 20 20"
-                                fill="currentColor"
-                                initial={{ scale: 0 }}
-                                animate={{ scale: 1 }}
-                                transition={{ type: "spring", damping: 10, stiffness: 100 }}
-                              >
-                                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                              </motion.svg>
-                            )}
-                          </motion.div>
-                        </NavLink>
-                      </motion.div>
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </motion.svg>
+                        </motion.span>
+                      </NavLink>
                     ))}
                   </div>
-                  <div className="py-6">
-                    <motion.a
-                      href="https://www.linkedin.com/in/yohannes-goitom-1b29022ab"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="group relative block overflow-hidden rounded-full bg-[#646cff] px-4 py-2 text-center transition-all duration-300 hover:bg-[#747bff]"
-                      onClick={() => setMobileMenuOpen(false)}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <div className="relative flex items-center justify-center gap-x-2">
-                        <motion.span 
-                          className="text-sm font-semibold text-white"
-                          initial={{ x: 0 }}
-                          whileHover={{ x: -2 }}
-                        >
-                          Hire me
-                        </motion.span>
-                        <motion.svg
-                          className="h-5 w-5 text-white"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          strokeWidth="2"
-                          stroke="currentColor"
-                          initial={{ x: 0 }}
-                          whileHover={{ x: 2 }}
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3"
-                          />
-                        </motion.svg>
-                      </div>
-                      <motion.div 
-                        className="absolute inset-0 -z-10 bg-gradient-to-r from-[#646cff] via-[#747bff] to-[#646cff]"
-                        initial={{ opacity: 0, x: "-100%" }}
-                        whileHover={{ opacity: 1, x: "0%" }}
-                        transition={{ duration: 0.3 }}
-                      />
-                    </motion.a>
-                  </div>
-                </div>
+                </nav>
               </motion.div>
-            </motion.div>
+            </>
           )}
         </AnimatePresence>
       </nav>
 
-      {/* Content */}
-      <div className="relative">
-        <main className="min-h-screen pt-16">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={location.pathname}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <Outlet />
-            </motion.div>
-          </AnimatePresence>
-        </main>
-
-        {/* Parallax Footer */}
-        <motion.footer
-          style={{
-            y: useSpring(useTransform(scrollY, [0, 500], [0, -30]), springConfig)
-          }}
-        >
-          <div className="mx-auto max-w-7xl px-6 py-12">
-            <div className="text-center">
-              <p className="text-sm leading-5 text-[#ffffffb3]">
-                &copy; {new Date().getFullYear()} Yohannes Goitom. All rights reserved.
-              </p>
-            </div>
-          </div>
-        </motion.footer>
-      </div>
+      <main>
+        <Outlet />
+      </main>
     </div>
-  )
+  );
 }

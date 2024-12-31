@@ -1,11 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useReducedMotion } from 'framer-motion';
 import { motion } from 'framer-motion';
 import { usePersonalInfo } from '../context/PersonalInfoContext';
 import ProjectCard from '../components/ProjectCard';
 import ImageCarousel from '../components/ImageCarousel';
+import { fadeInUp, stagger, performanceProps } from '../utils/animations';
+import { Link } from 'react-router-dom';
 
 export default function Portfolio() {
   const { personalInfo, loading, error } = usePersonalInfo();
+  const shouldReduceMotion = useReducedMotion();
 
   if (loading) {
     return (
@@ -25,23 +28,49 @@ export default function Portfolio() {
     );
   }
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: shouldReduceMotion ? 0 : 0.1,
+      },
+    },
+  };
+
+  const itemVariants = shouldReduceMotion
+    ? {
+        hidden: { opacity: 0 },
+        visible: { opacity: 1 },
+      }
+    : {
+        hidden: { opacity: 0, y: 20 },
+        visible: { opacity: 1, y: 0 },
+      };
+
+  // Get all images from Pinterest boards
+  const allPinterestImages = personalInfo?.pinterestBoards?.reduce((acc, board) => {
+    return [...acc, ...(board.images || [])];
+  }, []) || [];
+
+  // Combine with existing gallery images if needed
+  const allImages = [...allPinterestImages];
+
   return (
     <div className="relative isolate min-h-screen bg-[#0a0a0a]">
-      {/* Background gradient */}
       <div className="absolute inset-0 -z-10 bg-[#0a0a0a] opacity-80" />
       <div className="absolute inset-y-0 right-1/2 -z-10 mr-16 w-[200%] origin-bottom-left skew-x-[-30deg] bg-gradient-to-r from-[#0a0a0a] via-[#1a1a1a] to-[#0a0a0a] shadow-xl shadow-indigo-600/10 ring-1 ring-indigo-50 sm:mr-28 lg:mr-0 xl:mr-16 xl:origin-center" />
 
       <div className="relative mx-auto max-w-7xl px-6 py-24 sm:py-32">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+          {...performanceProps}
+          variants={itemVariants}
+          initial="hidden"
+          animate="visible"
           className="mx-auto max-w-2xl lg:text-center"
         >
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5 }}
+            variants={itemVariants}
             className="inline-block rounded-lg bg-[#646cff]/10 px-3 py-1 text-sm font-medium text-[#646cff] ring-1 ring-inset ring-[#646cff]/20 mb-4"
           >
             My Work
@@ -54,22 +83,26 @@ export default function Portfolio() {
           </p>
         </motion.div>
 
-        <div className="mx-auto mt-16 max-w-7xl">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="mx-auto mt-16 max-w-7xl"
+        >
           <div className="space-y-20">
             {personalInfo.projects && personalInfo.projects.map((project, index) => (
               <motion.article
                 key={index}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
+                variants={itemVariants}
                 className="relative isolate flex flex-col gap-8 lg:flex-row"
+                style={{ willChange: 'transform, opacity' }}
               >
                 <div className="relative aspect-[16/9] sm:aspect-[2/1] lg:aspect-square lg:w-64 lg:shrink-0">
-                  <motion.img
-                    whileHover={{ scale: 1.05 }}
+                  <img
                     src={project.image}
                     alt={project.title}
                     className="absolute inset-0 h-full w-full rounded-2xl bg-[#1a1a1a] object-cover shadow-xl"
+                    loading="lazy"
                   />
                   <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-[#ffffff1a]" />
                 </div>
@@ -79,9 +112,7 @@ export default function Portfolio() {
                     {project.technologies && project.technologies.map((tech, techIndex) => (
                       <motion.span
                         key={techIndex}
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.3, delay: 0.1 + techIndex * 0.1 }}
+                        variants={itemVariants}
                         className="inline-flex items-center rounded-full bg-[#646cff]/10 px-3 py-1 text-sm font-medium text-[#646cff] ring-1 ring-inset ring-[#646cff]/20"
                       >
                         {tech}
@@ -92,74 +123,96 @@ export default function Portfolio() {
                   <div className="group relative max-w-xl">
                     <h3 className="text-2xl font-bold tracking-tight text-[#f5f5f5] group-hover:text-[#646cff]">
                       {project.liveUrl ? (
-                        <motion.a
+                        <a
                           href={project.liveUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          whileHover={{ x: 10 }}
-                          className="inline-flex items-center gap-2"
+                          className="inline-flex items-center gap-2 transition-transform duration-200 hover:translate-x-2"
                         >
                           {project.title}
                           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                           </svg>
-                        </motion.a>
+                        </a>
                       ) : (
                         project.title
                       )}
                     </h3>
                     <p className="mt-5 text-base leading-7 text-[#ffffffb3]">{project.description}</p>
                   </div>
-
-                  {project.githubUrl && (
-                    <div className="mt-6 flex border-t border-[#ffffff1a] pt-6">
-                      <motion.a
-                        whileHover={{ x: 10 }}
-                        href={project.githubUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-sm font-semibold text-[#f5f5f5] hover:text-[#646cff]"
-                      >
-                        <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                          <path fillRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clipRule="evenodd" />
-                        </svg>
-                        View on GitHub
-                      </motion.a>
-                    </div>
-                  )}
                 </div>
               </motion.article>
             ))}
           </div>
-        </div>
+        </motion.div>
 
-        {/* Image Galleries */}
-        {personalInfo.galleries?.length > 0 && (
-          <div className="mt-32">
-            {personalInfo.galleries.map((gallery, index) => (
-              <motion.div
-                key={gallery.name || index}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 + (index * 0.1) }}
-                className="mx-auto max-w-7xl mt-16 sm:mt-20"
-              >
-                <div className="mx-auto max-w-2xl lg:max-w-none">
-                  <div className="flex items-center gap-4 mb-8">
-                    <h2 className="text-2xl font-bold tracking-tight text-[#f5f5f5]">
-                      {gallery.name}
-                    </h2>
-                    <div className="h-px flex-1 bg-gradient-to-r from-[#646cff]/50 to-transparent" />
+        {/* Pinterest Boards */}
+        {personalInfo?.pinterestBoards?.length > 0 && (
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="mt-32"
+          >
+            {personalInfo.pinterestBoards.map((board, index) => (
+              board.images?.length > 0 && (
+                <motion.div
+                  key={board.name || index}
+                  variants={itemVariants}
+                  className="mx-auto max-w-7xl mt-16 sm:mt-20"
+                  style={{ willChange: 'transform, opacity' }}
+                >
+                  <div className="mx-auto max-w-2xl lg:max-w-none">
+                    <div className="flex items-center gap-4 mb-8">
+                      <h2 className="text-2xl font-bold tracking-tight text-[#f5f5f5]">
+                        {board.name || `Pinterest Board ${index + 1}`}
+                      </h2>
+                      <div className="h-px flex-1 bg-gradient-to-r from-[#646cff]/50 to-transparent" />
+                    </div>
+                    <ImageCarousel 
+                      images={board.images} 
+                      aspectRatio={board.aspectRatio || '16/9'}
+                      autoSlideInterval={5000}
+                      key={`carousel-${board.name}-${board.aspectRatio}`}
+                    />
                   </div>
-                  <ImageCarousel 
-                    images={gallery.images} 
-                    aspectRatio={gallery.aspectRatio}
-                  />
-                </div>
-              </motion.div>
+                </motion.div>
+              )
             ))}
-          </div>
+          </motion.div>
         )}
+
+        {/* Contact Button */}
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="mt-20 flex justify-center"
+        >
+          <motion.div variants={itemVariants}>
+            <Link
+              to="/contact"
+              className="group inline-flex items-center gap-x-2 rounded-full bg-[#646cff] px-6 py-2.5 transition-transform duration-200 hover:scale-[1.02]"
+            >
+              <span className="text-sm font-semibold text-white">
+                Contact Me
+              </span>
+              <svg
+                className="h-5 w-5 text-white transition-transform duration-200 group-hover:translate-x-1"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth="2"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3"
+                />
+              </svg>
+            </Link>
+          </motion.div>
+        </motion.div>
       </div>
     </div>
   );

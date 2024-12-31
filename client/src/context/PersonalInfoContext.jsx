@@ -1,7 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { personalInfo as defaultInfo } from '../config/personalInfo';
 import { db } from '../config/firebase';
-import { doc, getDoc, setDoc, onSnapshot, collection } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 
 const PersonalInfoContext = createContext();
 
@@ -14,29 +13,20 @@ export const usePersonalInfo = () => {
 };
 
 export const PersonalInfoProvider = ({ children }) => {
-  const [personalInfo, setPersonalInfo] = useState(defaultInfo);
+  const [personalInfo, setPersonalInfo] = useState({
+    name: '',
+    title: '',
+    bio: '',
+    profilePhoto: '',
+    social: {},
+    experience: [],
+    education: [],
+    services: [],
+    skills: {},
+    galleries: []
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  // Initialize data in Firestore if it doesn't exist
-  useEffect(() => {
-    const initializeData = async () => {
-      try {
-        const docRef = doc(db, 'personalInfo', 'main');
-        const docSnap = await getDoc(docRef);
-        
-        if (!docSnap.exists()) {
-          await setDoc(docRef, defaultInfo);
-          console.log('Initialized default data in Firestore');
-        }
-      } catch (err) {
-        console.error('Error initializing data:', err);
-        setError(err.message);
-      }
-    };
-
-    initializeData();
-  }, []);
 
   // Subscribe to real-time updates
   useEffect(() => {

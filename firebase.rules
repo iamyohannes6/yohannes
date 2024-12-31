@@ -17,6 +17,18 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
     
+    // Personal Info collection
+    match /personalInfo/{document} {
+      allow read: if true;  // Public read access
+      allow write: if isAdmin();
+    }
+    
+    // Skills collection
+    match /skills/{skillId} {
+      allow read: if true;  // Public read access
+      allow write: if isAdmin();
+    }
+    
     // Projects collection
     match /projects/{projectId} {
       allow read: if true;  // Public read access

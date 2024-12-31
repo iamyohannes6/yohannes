@@ -1,141 +1,181 @@
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
 import { usePersonalInfo } from '../context/PersonalInfoContext';
+import { Link } from 'react-router-dom';
 
 export default function Home() {
-  const { personalInfo, loading } = usePersonalInfo();
-
-  const container = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.2
-      }
-    }
-  };
-
-  const item = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0 }
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#646cff]"></div>
-      </div>
-    );
-  }
+  const { personalInfo } = usePersonalInfo();
 
   return (
-    <div className="relative isolate min-h-screen overflow-hidden bg-[#0a0a0a]">
+    <div className="relative isolate min-h-screen bg-[#0a0a0a]">
       {/* Background gradient */}
-      <div className="absolute inset-x-0 -top-40 -z-10 transform-gpu overflow-hidden blur-3xl sm:-top-80">
-        <div className="relative left-[calc(50%-11rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-[#646cff] to-[#747bff] opacity-30 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]" />
-      </div>
+      <div className="absolute inset-0 -z-10 bg-[#0a0a0a] opacity-80" />
+      <div className="absolute inset-y-0 right-1/2 -z-10 mr-16 w-[200%] origin-bottom-left skew-x-[-30deg] bg-gradient-to-r from-[#0a0a0a] via-[#1a1a1a] to-[#0a0a0a] shadow-xl shadow-indigo-600/10 ring-1 ring-indigo-50 sm:mr-28 lg:mr-0 xl:mr-16 xl:origin-center" />
 
-      <div className="relative min-h-screen">
-        {/* Background elements */}
-        <div className="absolute inset-x-0 -top-40 -z-10 transform-gpu overflow-hidden blur-3xl sm:-top-80">
-          <div className="relative left-[calc(50%-11rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-[#646cff] to-[#747bff] opacity-30 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]" />
-        </div>
-
-        {/* Main container with fixed height */}
-        <div className="relative mx-auto max-w-7xl px-6 py-12 flex flex-col min-h-screen">
-          {/* Content wrapper */}
-          <div className="flex-grow">
-            {/* Grid container */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-16 h-full">
-              {/* Text content */}
+      {/* Main container */}
+      <div className="relative mx-auto max-w-7xl px-6 py-24 sm:py-32">
+        {/* Content wrapper */}
+        <div className="flex-grow">
+          {/* Grid container */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-16 h-full">
+            {/* Text content */}
+            <div className="flex flex-col items-start justify-center max-w-2xl mx-auto lg:mx-0">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, ease: "easeOut" }}
-                className="flex flex-col items-start justify-center max-w-2xl mx-auto lg:mx-0"
+                transition={{ duration: 0.5 }}
+                className="space-y-6"
               >
-                <h1 className="text-4xl font-bold tracking-tight text-[#f5f5f5] sm:text-6xl">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.5 }}
+                  className="inline-block rounded-lg bg-[#646cff]/10 px-3 py-1 text-sm font-medium text-[#646cff] ring-1 ring-inset ring-[#646cff]/20"
+                >
+                  Welcome to my portfolio
+                </motion.div>
+
+                <h1 className="text-4xl font-bold tracking-tight text-[#f5f5f5] sm:text-6xl bg-clip-text text-transparent bg-gradient-to-r from-[#f5f5f5] via-[#646cff] to-[#f5f5f5]">
                   {personalInfo.name}
                 </h1>
-                <p className="mt-4 text-xl text-[#f5f5f5]">{personalInfo.title}</p>
-                <p className="mt-6 text-lg leading-8 text-[#ffffffb3]">
+                
+                <p className="text-xl text-[#f5f5f5] bg-clip-text text-transparent bg-gradient-to-r from-[#646cff] to-[#747bff]">
+                  {personalInfo.title}
+                </p>
+                
+                <p className="text-lg leading-8 text-[#ffffffb3]">
                   {personalInfo.bio}
                 </p>
-                <div className="mt-8 flex gap-4">
-                  {personalInfo.social?.github && (
-                    <a
-                      href={personalInfo.social.github}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[#f5f5f5] hover:text-[#646cff] transition-colors duration-200"
+
+                <div className="flex flex-wrap gap-4 mt-8">
+                  <motion.div whileHover={{ scale: 1.05 }}>
+                    <Link
+                      to="/portfolio"
+                      className="inline-flex items-center gap-x-2 rounded-full bg-[#646cff] px-6 py-2.5"
                     >
-                      <span className="sr-only">GitHub</span>
-                      <svg
-                        className="h-6 w-6"
-                        fill="currentColor"
+                      <span className="text-sm font-semibold text-white">
+                        View Portfolio
+                      </span>
+                      <motion.svg
+                        whileHover={{ x: 4 }}
+                        className="h-5 w-5 text-white"
+                        fill="none"
                         viewBox="0 0 24 24"
+                        strokeWidth="2"
+                        stroke="currentColor"
                       >
                         <path
-                          fillRule="evenodd"
-                          d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
-                          clipRule="evenodd"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3"
                         />
-                      </svg>
-                    </a>
-                  )}
-                </div>
-              </motion.div>
+                      </motion.svg>
+                    </Link>
+                  </motion.div>
 
-              {/* Profile card */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, ease: "easeOut", delay: 0.1 }}
-                className="relative flex items-center justify-center lg:justify-end pt-8 lg:pt-0"
-              >
-                <div className="relative w-72 h-96 max-w-full">
-                  {/* Card content */}
-                  <div className="absolute -inset-2">
-                    <div 
-                      className="absolute inset-0 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 opacity-75 blur-2xl"
-                      style={{ 
-                        willChange: 'filter',
-                        transform: 'translateZ(0)'
-                      }} 
-                    />
-                  </div>
-                  
-                  <div className="relative bg-[#1a1a1a] rounded-3xl border border-[#ffffff30] backdrop-blur-xl overflow-hidden shadow-lg transform-gpu">
-                    <div 
-                      className="absolute inset-0 bg-gradient-to-br from-blue-500/20 via-purple-500/20 to-pink-500/20"
-                      style={{ willChange: 'opacity' }}
-                    />
-                    
-                    {personalInfo.profilePhoto && (
-                      <div className="relative h-full w-full">
+                  <motion.div whileHover={{ scale: 1.05 }}>
+                    <Link
+                      to="/contact"
+                      className="inline-flex items-center gap-x-2 rounded-full bg-[#ffffff0d] px-6 py-2.5"
+                    >
+                      <span className="text-sm font-semibold text-[#f5f5f5]">
+                        Get in Touch
+                      </span>
+                      <motion.svg
+                        whileHover={{ x: 4 }}
+                        className="h-5 w-5 text-[#f5f5f5]"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth="2"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"
+                        />
+                      </motion.svg>
+                    </Link>
+                  </motion.div>
+                </div>
+
+                {personalInfo.socialLinks && (
+                  <div className="flex gap-4 mt-8">
+                    {personalInfo.socialLinks.map((link, index) => (
+                      <motion.a
+                        key={index}
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        whileHover={{ scale: 1.1 }}
+                        transition={{ duration: 0.3, delay: 0.1 * index }}
+                        className="rounded-lg bg-[#ffffff0d] p-2"
+                      >
+                        <span className="sr-only">{link.platform}</span>
                         <img
-                          src={personalInfo.profilePhoto}
-                          alt={personalInfo.name}
-                          className="h-full w-full object-cover"
-                          loading="eager"
-                          style={{ willChange: 'transform' }}
+                          src={link.icon}
+                          alt={link.platform}
+                          className="h-6 w-6"
                         />
-                        <div 
-                          className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/90 via-transparent to-[#1a1a1a]/30"
-                          style={{ willChange: 'opacity' }}
-                        />
-                      </div>
-                    )}
-
-                    <div className="absolute top-4 left-4 w-8 h-8 rounded-full bg-gradient-to-br from-blue-500/30 to-purple-500/30 backdrop-blur-xl border border-[#ffffff30]" />
-                    <div className="absolute bottom-4 right-4 w-6 h-6 rounded-full bg-gradient-to-br from-purple-500/30 to-pink-500/30 backdrop-blur-xl border border-[#ffffff30]" />
+                      </motion.a>
+                    ))}
                   </div>
-                </div>
+                )}
               </motion.div>
             </div>
-          </div>
 
-          {/* Navigation buttons in fixed position at bottom */}
+            {/* Profile Card */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="relative flex items-center justify-center lg:justify-end pt-8 lg:pt-0"
+            >
+              <div className="relative w-80 h-96 max-w-full">
+                {/* Card Glow Effect */}
+                <div className="absolute -inset-1">
+                  <div 
+                    className="absolute inset-0 bg-gradient-to-r from-[#646cff] via-[#747bff] to-[#646cff] opacity-75 blur-2xl"
+                  />
+                </div>
+                
+                {/* Profile Card */}
+                <motion.div 
+                  className="relative bg-[#1a1a1a] rounded-3xl border border-[#ffffff30] backdrop-blur-xl overflow-hidden shadow-lg"
+                  whileHover={{ scale: 1.02 }}
+                >
+                  {/* Card Background Gradient */}
+                  <div 
+                    className="absolute inset-0 bg-gradient-to-br from-[#646cff]/20 via-[#747bff]/20 to-[#646cff]/20"
+                  />
+                  
+                  {/* Profile Image */}
+                  {personalInfo.profilePhoto && (
+                    <div className="relative h-full w-full">
+                      <motion.img
+                        initial={{ scale: 1.1 }}
+                        animate={{ scale: 1 }}
+                        transition={{ duration: 0.5 }}
+                        src={personalInfo.profilePhoto}
+                        alt={personalInfo.name}
+                        className="h-full w-full object-cover"
+                        loading="eager"
+                      />
+                      {/* Image Overlay Gradient */}
+                      <div 
+                        className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/90 via-transparent to-[#1a1a1a]/30"
+                      />
+                    </div>
+                  )}
+
+                  {/* Decorative Elements */}
+                  <div className="absolute top-4 left-4 w-8 h-8 rounded-full bg-gradient-to-br from-[#646cff]/30 to-[#747bff]/30 backdrop-blur-xl border border-[#ffffff30]" />
+                  <div className="absolute bottom-4 right-4 w-6 h-6 rounded-full bg-gradient-to-br from-[#747bff]/30 to-[#646cff]/30 backdrop-blur-xl border border-[#ffffff30]" />
+                </motion.div>
+              </div>
+            </motion.div>
+          </div>
         </div>
       </div>
 

@@ -93,6 +93,25 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+      <div className="mt-8">
+        <h2 className="text-lg font-medium text-gray-900">Navigation</h2>
+        <div className="mt-4 overflow-hidden rounded-lg bg-white shadow">
+          <div className="p-6">
+            <Link
+              to="/projects"
+              className="text-[#f5f5f5] hover:text-[#646cff] transition-colors duration-200"
+            >
+              Projects Manager
+            </Link>
+            <Link
+              to="/skills"
+              className="text-[#f5f5f5] hover:text-[#646cff] transition-colors duration-200"
+            >
+              Skills Manager
+            </Link>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

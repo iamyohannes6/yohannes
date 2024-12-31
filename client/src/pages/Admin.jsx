@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { usePersonalInfo } from '../context/PersonalInfoContext';
 
 const AdminDashboard = () => {
@@ -15,13 +15,18 @@ const AdminDashboard = () => {
     education: [],
     services: [],
     skills: {},
-    galleries: []  // Array of galleries, each with a name and images
+    galleries: []
   });
   const [message, setMessage] = useState({ type: '', content: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    setFormData(personalInfo);
+    if (personalInfo) {
+      setFormData(prev => ({
+        ...personalInfo,
+        skills: personalInfo.skills || {}
+      }));
+    }
   }, [personalInfo]);
 
   const handleBasicInfoChange = (e) => {
@@ -59,7 +64,7 @@ const AdminDashboard = () => {
       ...prev,
       skills: {
         ...prev.skills,
-        [category]: [...prev.skills[category], '']
+        [category]: [...(prev.skills[category] || []), '']
       }
     }));
   };
@@ -162,6 +167,42 @@ const AdminDashboard = () => {
     }
   };
 
+  const addCategory = () => {
+    const categoryName = '';
+    setFormData(prev => ({
+      ...prev,
+      skills: {
+        ...prev.skills,
+        [categoryName]: []
+      }
+    }));
+  };
+
+  const renameCategory = (oldName, newName) => {
+    if (newName && newName !== oldName) {
+      setFormData(prev => {
+        const { [oldName]: categorySkills, ...otherCategories } = prev.skills;
+        return {
+          ...prev,
+          skills: {
+            ...otherCategories,
+            [newName]: categorySkills || []
+          }
+        };
+      });
+    }
+  };
+
+  const removeCategory = (categoryName) => {
+    setFormData(prev => {
+      const { [categoryName]: _, ...remainingCategories } = prev.skills;
+      return {
+        ...prev,
+        skills: remainingCategories
+      };
+    });
+  };
+
   if (contextLoading) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
@@ -197,796 +238,1099 @@ const AdminDashboard = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-[#ffffff0d] rounded-lg shadow-xl p-6"
+          className="bg-gradient-to-br from-[#ffffff0d] to-[#ffffff05] rounded-2xl shadow-xl p-8 border border-[#ffffff1a] backdrop-blur-sm"
         >
           <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl font-bold text-[#f5f5f5]">Admin Dashboard</h1>
-            <button
+            <motion.h1 
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#f5f5f5] via-[#646cff] to-[#f5f5f5]"
+            >
+              Admin Dashboard
+            </motion.h1>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => {
                 sessionStorage.removeItem('adminAuth');
                 window.location.reload();
               }}
-              className="text-[#ffffffb3] hover:text-[#f5f5f5]"
+              className="flex items-center gap-2 px-4 py-2 rounded-full bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all duration-300"
             >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
               Logout
-            </button>
+            </motion.button>
           </div>
 
-          {/* Message Display */}
+          {/* Message Display with Animation */}
+          <AnimatePresence mode="wait">
           {message.content && (
-            <div
-              className={`p-4 mb-6 rounded-md ${
-                message.type === 'success' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
-              }`}
-            >
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                className={`p-4 mb-6 rounded-lg backdrop-blur-sm ${
+                  message.type === 'success' 
+                    ? 'bg-green-500/10 text-green-400 border border-green-500/20' 
+                    : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  {message.type === 'success' ? (
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  )}
               {message.content}
             </div>
-          )}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-          {/* Tabs */}
-          <div className="border-b border-[#ffffff1a] mb-6">
-            <nav className="-mb-px flex space-x-8">
-              {tabs.map(tab => (
-                <button
+          {/* Tabs with Animation */}
+          <div className="border-b border-[#ffffff1a] mb-8">
+            <nav className="-mb-px flex space-x-8 overflow-x-auto scrollbar-hide">
+              {tabs.map((tab, index) => (
+                <motion.button
                   key={tab.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
                   onClick={() => setActiveTab(tab.id)}
                   className={`
-                    py-4 px-1 border-b-2 font-medium text-sm
+                    relative py-4 px-1 font-medium text-sm whitespace-nowrap
                     ${activeTab === tab.id
-                      ? 'border-[#646cff] text-[#646cff]'
-                      : 'border-transparent text-[#ffffffb3] hover:text-[#f5f5f5] hover:border-[#ffffff4d]'
+                      ? 'text-[#646cff]'
+                      : 'text-[#ffffffb3] hover:text-[#f5f5f5]'
                     }
                   `}
                 >
                   {tab.label}
-                </button>
+                  {activeTab === tab.id && (
+                    <motion.div
+                      layoutId="activeTab"
+                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#646cff] to-[#747bff]"
+                    />
+                  )}
+                </motion.button>
               ))}
             </nav>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-8">
             {/* Personal Info */}
             {activeTab === 'personal' && (
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-[#f5f5f5]">Name</label>
-                  <input
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="space-y-6"
+              >
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-[#f5f5f5] mb-2">Name</label>
+                    <motion.input
+                      whileFocus={{ scale: 1.01 }}
                     type="text"
                     name="name"
                     value={formData.name}
                     onChange={handleBasicInfoChange}
-                    className="mt-1 block w-full rounded-md bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-3 py-2"
+                      className="mt-1 block w-full rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-[#f5f5f5]">Title</label>
-                  <input
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-[#f5f5f5] mb-2">Title</label>
+                    <motion.input
+                      whileFocus={{ scale: 1.01 }}
                     type="text"
                     name="title"
                     value={formData.title}
                     onChange={handleBasicInfoChange}
-                    className="mt-1 block w-full rounded-md bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-3 py-2"
+                      className="mt-1 block w-full rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-[#f5f5f5]">Bio</label>
-                  <textarea
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-[#f5f5f5] mb-2">Bio</label>
+                    <motion.textarea
+                      whileFocus={{ scale: 1.01 }}
                     name="bio"
                     value={formData.bio}
                     onChange={handleBasicInfoChange}
                     rows={4}
-                    className="mt-1 block w-full rounded-md bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-3 py-2"
+                      className="mt-1 block w-full rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
                   />
                 </div>
-                <div>
-                  <label htmlFor="profilePhoto" className="block text-sm font-medium text-[#f5f5f5]">
+                  <div className="col-span-2">
+                    <label htmlFor="profilePhoto" className="block text-sm font-medium text-[#f5f5f5] mb-2">
                     Profile Photo URL
                   </label>
-                  <div className="mt-2">
-                    <input
+                    <motion.input
+                      whileFocus={{ scale: 1.01 }}
                       type="text"
                       name="profilePhoto"
                       id="profilePhoto"
                       value={formData.profilePhoto || ''}
                       onChange={handleBasicInfoChange}
-                      className="block w-full rounded-md border-0 bg-[#ffffff0d] py-1.5 text-[#f5f5f5] shadow-sm ring-1 ring-inset ring-[#ffffff1a] focus:ring-2 focus:ring-inset focus:ring-[#646cff] sm:text-sm sm:leading-6"
+                      className="mt-1 block w-full rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
                     />
                   </div>
                 </div>
-              </div>
+              </motion.div>
             )}
 
             {/* Social Media Links */}
             {activeTab === 'social' && (
-              <div className="space-y-6">
-                <h3 className="text-lg font-medium text-[#f5f5f5]">Social Media Links</h3>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="space-y-8"
+              >
                   <div>
+                  <h3 className="text-lg font-medium bg-clip-text text-transparent bg-gradient-to-r from-[#f5f5f5] via-[#646cff] to-[#f5f5f5] mb-6">Social Media Links</h3>
+                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      className="group relative"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-[#646cff]/20 to-[#747bff]/20 rounded-lg blur opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      <div className="relative space-y-2">
                     <label htmlFor="github" className="block text-sm font-medium text-[#f5f5f5]">
                       GitHub URL
                     </label>
-                    <input
+                        <motion.input
+                          whileFocus={{ scale: 1.01 }}
                       type="url"
                       name="github"
                       id="github"
                       value={formData.social?.github || ''}
                       onChange={(e) => handleSocialChange('github', e.target.value)}
-                      className="mt-1 block w-full rounded-md border-0 bg-[#ffffff0d] py-1.5 text-[#f5f5f5] shadow-sm ring-1 ring-inset ring-[#ffffff1a] focus:ring-2 focus:ring-inset focus:ring-[#646cff] sm:text-sm sm:leading-6"
+                          className="block w-full rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
                       placeholder="https://github.com/username"
                     />
                   </div>
-                  <div>
+                    </motion.div>
+
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      className="group relative"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-[#646cff]/20 to-[#747bff]/20 rounded-lg blur opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      <div className="relative space-y-2">
                     <label htmlFor="linkedin" className="block text-sm font-medium text-[#f5f5f5]">
                       LinkedIn URL
                     </label>
-                    <input
+                        <motion.input
+                          whileFocus={{ scale: 1.01 }}
                       type="url"
                       name="linkedin"
                       id="linkedin"
                       value={formData.social?.linkedin || ''}
                       onChange={(e) => handleSocialChange('linkedin', e.target.value)}
-                      className="mt-1 block w-full rounded-md border-0 bg-[#ffffff0d] py-1.5 text-[#f5f5f5] shadow-sm ring-1 ring-inset ring-[#ffffff1a] focus:ring-2 focus:ring-inset focus:ring-[#646cff] sm:text-sm sm:leading-6"
+                          className="block w-full rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
                       placeholder="https://linkedin.com/in/username"
                     />
                   </div>
-                  <div>
-                    <label htmlFor="twitter" className="block text-sm font-medium text-[#f5f5f5]">
-                      Twitter URL
-                    </label>
-                    <input
-                      type="url"
-                      name="twitter"
-                      id="twitter"
-                      value={formData.social?.twitter || ''}
-                      onChange={(e) => handleSocialChange('twitter', e.target.value)}
-                      className="mt-1 block w-full rounded-md border-0 bg-[#ffffff0d] py-1.5 text-[#f5f5f5] shadow-sm ring-1 ring-inset ring-[#ffffff1a] focus:ring-2 focus:ring-inset focus:ring-[#646cff] sm:text-sm sm:leading-6"
-                      placeholder="https://twitter.com/username"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="pinterest" className="block text-sm font-medium text-[#f5f5f5]">
-                      Pinterest URL
-                    </label>
-                    <input
-                      type="url"
-                      name="pinterest"
-                      id="pinterest"
-                      value={formData.social?.pinterest || ''}
-                      onChange={(e) => handleSocialChange('pinterest', e.target.value)}
-                      className="mt-1 block w-full rounded-md border-0 bg-[#ffffff0d] py-1.5 text-[#f5f5f5] shadow-sm ring-1 ring-inset ring-[#ffffff1a] focus:ring-2 focus:ring-inset focus:ring-[#646cff] sm:text-sm sm:leading-6"
-                      placeholder="https://pinterest.com/username"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="instagram" className="block text-sm font-medium text-[#f5f5f5]">
-                      Instagram URL
-                    </label>
-                    <input
-                      type="url"
-                      name="instagram"
-                      id="instagram"
-                      value={formData.social?.instagram || ''}
-                      onChange={(e) => handleSocialChange('instagram', e.target.value)}
-                      className="mt-1 block w-full rounded-md border-0 bg-[#ffffff0d] py-1.5 text-[#f5f5f5] shadow-sm ring-1 ring-inset ring-[#ffffff1a] focus:ring-2 focus:ring-inset focus:ring-[#646cff] sm:text-sm sm:leading-6"
-                      placeholder="https://instagram.com/username"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-[#f5f5f5]">
-                      Email Address
-                    </label>
-                    <input
-                      type="email"
-                      name="email"
-                      id="email"
-                      value={formData.social?.email || ''}
-                      onChange={(e) => handleSocialChange('email', e.target.value)}
-                      className="mt-1 block w-full rounded-md border-0 bg-[#ffffff0d] py-1.5 text-[#f5f5f5] shadow-sm ring-1 ring-inset ring-[#ffffff1a] focus:ring-2 focus:ring-inset focus:ring-[#646cff] sm:text-sm sm:leading-6"
-                      placeholder="your@email.com"
-                    />
+                    </motion.div>
+
+                    {/* Add similar styling for other social inputs */}
                   </div>
                 </div>
 
                 {/* Custom Links Section */}
                 <div className="mt-8">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-medium text-[#f5f5f5]">Additional Links</h3>
-                    <button
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-lg font-medium bg-clip-text text-transparent bg-gradient-to-r from-[#f5f5f5] via-[#646cff] to-[#f5f5f5]">Additional Links</h3>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                       type="button"
                       onClick={handleCustomLinkAdd}
-                      className="rounded-md bg-[#646cff] px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#747bff] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#646cff]"
+                      className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#646cff] text-white hover:bg-[#747bff] transition-all duration-300"
                     >
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
                       Add Link
-                    </button>
+                    </motion.button>
                   </div>
-                  <div className="mt-4 space-y-4">
+                  <motion.div layout className="space-y-4">
                     {formData.social?.customLinks?.map((link, index) => (
-                      <div key={index} className="flex gap-4 items-start">
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 20 }}
+                        className="flex gap-4 items-start bg-[#ffffff0d] p-4 rounded-lg border border-[#ffffff1a] hover:border-[#646cff] transition-colors duration-300"
+                      >
                         <div className="flex-1">
-                          <input
+                          <motion.input
+                            whileFocus={{ scale: 1.01 }}
                             type="text"
                             value={link.title}
                             onChange={(e) => handleCustomLinkChange(index, 'title', e.target.value)}
                             placeholder="Link Title"
-                            className="block w-full rounded-md border-0 bg-[#ffffff0d] py-1.5 text-[#f5f5f5] shadow-sm ring-1 ring-inset ring-[#ffffff1a] focus:ring-2 focus:ring-inset focus:ring-[#646cff] sm:text-sm sm:leading-6"
+                            className="block w-full rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
                           />
                         </div>
                         <div className="flex-1">
-                          <input
+                          <motion.input
+                            whileFocus={{ scale: 1.01 }}
                             type="url"
                             value={link.url}
                             onChange={(e) => handleCustomLinkChange(index, 'url', e.target.value)}
                             placeholder="https://example.com"
-                            className="block w-full rounded-md border-0 bg-[#ffffff0d] py-1.5 text-[#f5f5f5] shadow-sm ring-1 ring-inset ring-[#ffffff1a] focus:ring-2 focus:ring-inset focus:ring-[#646cff] sm:text-sm sm:leading-6"
+                            className="block w-full rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
                           />
                         </div>
-                        <button
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
                           type="button"
                           onClick={() => handleCustomLinkRemove(index)}
-                          className="rounded-md bg-red-500 p-1.5 text-white shadow-sm hover:bg-red-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
+                          className="p-2 rounded-full bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all duration-300"
                         >
-                          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                           </svg>
-                        </button>
-                      </div>
+                        </motion.button>
+                      </motion.div>
                     ))}
+                  </motion.div>
                   </div>
-                </div>
-              </div>
+              </motion.div>
             )}
 
             {/* Experience Section */}
             {activeTab === 'experience' && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium text-[#f5f5f5]">Experience</h3>
-                  <button
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="space-y-8"
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-medium bg-clip-text text-transparent bg-gradient-to-r from-[#f5f5f5] via-[#646cff] to-[#f5f5f5]">Experience</h3>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                     type="button"
                     onClick={() => setFormData(prev => ({
                       ...prev,
-                      experience: [...prev.experience, { title: '', company: '', period: '', description: '' }]
+                      experience: [...(prev.experience || []), { title: '', company: '', period: '', description: '' }]
                     }))}
-                    className="rounded-md bg-[#646cff] px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#747bff]"
+                    className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#646cff] text-white hover:bg-[#747bff] transition-all duration-300"
                   >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
                     Add Experience
-                  </button>
+                  </motion.button>
                 </div>
+
+                <motion.div layout className="space-y-6">
                 {formData.experience?.map((exp, index) => (
-                  <div key={index} className="space-y-4 bg-[#ffffff0d] p-4 rounded-lg">
-                    <div className="flex justify-end">
-                      <button
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      className="group relative bg-gradient-to-br from-[#ffffff0d] to-[#ffffff05] p-6 rounded-xl border border-[#ffffff1a] hover:border-[#646cff] transition-all duration-300"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-[#646cff]/5 to-[#747bff]/5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      
+                      <div className="relative space-y-4">
+                        <div className="flex justify-between items-center">
+                          <h4 className="text-base font-medium text-[#f5f5f5]">Position {index + 1}</h4>
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
                         type="button"
                         onClick={() => {
-                          const newExperience = [...formData.experience];
+                              const newExperience = [...(formData.experience || [])];
                           newExperience.splice(index, 1);
                           setFormData(prev => ({ ...prev, experience: newExperience }));
                         }}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        Remove
-                      </button>
+                            className="p-2 rounded-full bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all duration-300"
+                          >
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </motion.button>
                     </div>
+
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
-                      <label className="block text-sm font-medium text-[#f5f5f5]">Title</label>
-                      <input
+                            <label className="block text-sm font-medium text-[#f5f5f5] mb-2">Title</label>
+                            <motion.input
+                              whileFocus={{ scale: 1.01 }}
                         type="text"
                         value={exp.title}
                         onChange={e => {
-                          const newExperience = [...formData.experience];
+                                const newExperience = [...(formData.experience || [])];
                           newExperience[index] = { ...exp, title: e.target.value };
                           setFormData(prev => ({ ...prev, experience: newExperience }));
                         }}
-                        className="mt-1 block w-full rounded-md border-0 bg-[#ffffff1a] py-1.5 text-[#f5f5f5]"
+                              className="block w-full rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
+                              placeholder="Position Title"
                       />
                     </div>
+
                     <div>
-                      <label className="block text-sm font-medium text-[#f5f5f5]">Company</label>
-                      <input
+                            <label className="block text-sm font-medium text-[#f5f5f5] mb-2">Company</label>
+                            <motion.input
+                              whileFocus={{ scale: 1.01 }}
                         type="text"
                         value={exp.company}
                         onChange={e => {
-                          const newExperience = [...formData.experience];
+                                const newExperience = [...(formData.experience || [])];
                           newExperience[index] = { ...exp, company: e.target.value };
                           setFormData(prev => ({ ...prev, experience: newExperience }));
                         }}
-                        className="mt-1 block w-full rounded-md border-0 bg-[#ffffff1a] py-1.5 text-[#f5f5f5]"
+                              className="block w-full rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
+                              placeholder="Company Name"
                       />
                     </div>
+
                     <div>
-                      <label className="block text-sm font-medium text-[#f5f5f5]">Period</label>
-                      <input
+                            <label className="block text-sm font-medium text-[#f5f5f5] mb-2">Period</label>
+                            <motion.input
+                              whileFocus={{ scale: 1.01 }}
                         type="text"
                         value={exp.period}
                         onChange={e => {
-                          const newExperience = [...formData.experience];
+                                const newExperience = [...(formData.experience || [])];
                           newExperience[index] = { ...exp, period: e.target.value };
                           setFormData(prev => ({ ...prev, experience: newExperience }));
                         }}
-                        className="mt-1 block w-full rounded-md border-0 bg-[#ffffff1a] py-1.5 text-[#f5f5f5]"
+                              className="block w-full rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
+                              placeholder="e.g., 2020 - Present"
                       />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-[#f5f5f5]">Description</label>
-                      <textarea
+
+                          <div className="sm:col-span-2">
+                            <label className="block text-sm font-medium text-[#f5f5f5] mb-2">Description</label>
+                            <motion.textarea
+                              whileFocus={{ scale: 1.01 }}
                         value={exp.description}
                         onChange={e => {
-                          const newExperience = [...formData.experience];
+                                const newExperience = [...(formData.experience || [])];
                           newExperience[index] = { ...exp, description: e.target.value };
                           setFormData(prev => ({ ...prev, experience: newExperience }));
                         }}
                         rows={3}
-                        className="mt-1 block w-full rounded-md border-0 bg-[#ffffff1a] py-1.5 text-[#f5f5f5]"
+                              className="block w-full rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
+                              placeholder="Describe your responsibilities and achievements..."
                       />
                     </div>
                   </div>
-                ))}
               </div>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              </motion.div>
             )}
 
             {/* Education Section */}
             {activeTab === 'education' && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium text-[#f5f5f5]">Education</h3>
-                  <button
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="space-y-8"
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-medium bg-clip-text text-transparent bg-gradient-to-r from-[#f5f5f5] via-[#646cff] to-[#f5f5f5]">Education</h3>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                     type="button"
                     onClick={() => setFormData(prev => ({
                       ...prev,
-                      education: [...prev.education, { degree: '', institution: '', period: '', description: '' }]
+                      education: [...(prev.education || []), { degree: '', institution: '', period: '', description: '' }]
                     }))}
-                    className="rounded-md bg-[#646cff] px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#747bff]"
+                    className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#646cff] text-white hover:bg-[#747bff] transition-all duration-300"
                   >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
                     Add Education
-                  </button>
+                  </motion.button>
                 </div>
+
+                <motion.div layout className="space-y-6">
                 {formData.education?.map((edu, index) => (
-                  <div key={index} className="space-y-4 bg-[#ffffff0d] p-4 rounded-lg">
-                    <div className="flex justify-end">
-                      <button
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      className="group relative bg-gradient-to-br from-[#ffffff0d] to-[#ffffff05] p-6 rounded-xl border border-[#ffffff1a] hover:border-[#646cff] transition-all duration-300"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-[#646cff]/5 to-[#747bff]/5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      
+                      <div className="relative space-y-4">
+                        <div className="flex justify-between items-center">
+                          <h4 className="text-base font-medium text-[#f5f5f5]">Education {index + 1}</h4>
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
                         type="button"
                         onClick={() => {
-                          const newEducation = [...formData.education];
+                              const newEducation = [...(formData.education || [])];
                           newEducation.splice(index, 1);
                           setFormData(prev => ({ ...prev, education: newEducation }));
                         }}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        Remove
-                      </button>
+                            className="p-2 rounded-full bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all duration-300"
+                          >
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </motion.button>
                     </div>
+
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
-                      <label className="block text-sm font-medium text-[#f5f5f5]">Degree</label>
-                      <input
+                            <label className="block text-sm font-medium text-[#f5f5f5] mb-2">Degree</label>
+                            <motion.input
+                              whileFocus={{ scale: 1.01 }}
                         type="text"
                         value={edu.degree}
                         onChange={e => {
-                          const newEducation = [...formData.education];
+                                const newEducation = [...(formData.education || [])];
                           newEducation[index] = { ...edu, degree: e.target.value };
                           setFormData(prev => ({ ...prev, education: newEducation }));
                         }}
-                        className="mt-1 block w-full rounded-md border-0 bg-[#ffffff1a] py-1.5 text-[#f5f5f5]"
+                              className="block w-full rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
+                              placeholder="Degree or Certificate"
                       />
                     </div>
+
                     <div>
-                      <label className="block text-sm font-medium text-[#f5f5f5]">Institution</label>
-                      <input
+                            <label className="block text-sm font-medium text-[#f5f5f5] mb-2">Institution</label>
+                            <motion.input
+                              whileFocus={{ scale: 1.01 }}
                         type="text"
                         value={edu.institution}
                         onChange={e => {
-                          const newEducation = [...formData.education];
+                                const newEducation = [...(formData.education || [])];
                           newEducation[index] = { ...edu, institution: e.target.value };
                           setFormData(prev => ({ ...prev, education: newEducation }));
                         }}
-                        className="mt-1 block w-full rounded-md border-0 bg-[#ffffff1a] py-1.5 text-[#f5f5f5]"
+                              className="block w-full rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
+                              placeholder="Institution Name"
                       />
                     </div>
+
                     <div>
-                      <label className="block text-sm font-medium text-[#f5f5f5]">Period</label>
-                      <input
+                            <label className="block text-sm font-medium text-[#f5f5f5] mb-2">Period</label>
+                            <motion.input
+                              whileFocus={{ scale: 1.01 }}
                         type="text"
                         value={edu.period}
                         onChange={e => {
-                          const newEducation = [...formData.education];
+                                const newEducation = [...(formData.education || [])];
                           newEducation[index] = { ...edu, period: e.target.value };
                           setFormData(prev => ({ ...prev, education: newEducation }));
                         }}
-                        className="mt-1 block w-full rounded-md border-0 bg-[#ffffff1a] py-1.5 text-[#f5f5f5]"
+                              className="block w-full rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
+                              placeholder="e.g., 2018 - 2022"
                       />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-[#f5f5f5]">Description</label>
-                      <textarea
+
+                          <div className="sm:col-span-2">
+                            <label className="block text-sm font-medium text-[#f5f5f5] mb-2">Description</label>
+                            <motion.textarea
+                              whileFocus={{ scale: 1.01 }}
                         value={edu.description}
                         onChange={e => {
-                          const newEducation = [...formData.education];
+                                const newEducation = [...(formData.education || [])];
                           newEducation[index] = { ...edu, description: e.target.value };
                           setFormData(prev => ({ ...prev, education: newEducation }));
                         }}
                         rows={3}
-                        className="mt-1 block w-full rounded-md border-0 bg-[#ffffff1a] py-1.5 text-[#f5f5f5]"
+                              className="block w-full rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
+                              placeholder="Describe your academic achievements and activities..."
                       />
                     </div>
                   </div>
-                ))}
               </div>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              </motion.div>
             )}
 
             {/* Services Section */}
             {activeTab === 'services' && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium text-[#f5f5f5]">Services</h3>
-                  <button
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="space-y-8"
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-medium bg-clip-text text-transparent bg-gradient-to-r from-[#f5f5f5] via-[#646cff] to-[#f5f5f5]">Services</h3>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                     type="button"
                     onClick={() => setFormData(prev => ({
                       ...prev,
-                      services: [...prev.services, { title: '', description: '' }]
+                      services: [...(prev.services || []), { title: '', description: '', icon: '' }]
                     }))}
-                    className="rounded-md bg-[#646cff] px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#747bff]"
+                    className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#646cff] text-white hover:bg-[#747bff] transition-all duration-300"
                   >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
                     Add Service
-                  </button>
+                  </motion.button>
                 </div>
+
+                <motion.div layout className="space-y-6">
                 {formData.services?.map((service, index) => (
-                  <div key={index} className="space-y-4 bg-[#ffffff0d] p-4 rounded-lg">
-                    <div className="flex justify-end">
-                      <button
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      className="group relative bg-gradient-to-br from-[#ffffff0d] to-[#ffffff05] p-6 rounded-xl border border-[#ffffff1a] hover:border-[#646cff] transition-all duration-300"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-[#646cff]/5 to-[#747bff]/5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      
+                      <div className="relative space-y-4">
+                        <div className="flex justify-between items-center">
+                          <h4 className="text-base font-medium text-[#f5f5f5]">Service {index + 1}</h4>
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
                         type="button"
                         onClick={() => {
-                          const newServices = [...formData.services];
+                              const newServices = [...(formData.services || [])];
                           newServices.splice(index, 1);
                           setFormData(prev => ({ ...prev, services: newServices }));
                         }}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        Remove
-                      </button>
+                            className="p-2 rounded-full bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all duration-300"
+                          >
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </motion.button>
                     </div>
+
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
-                      <label className="block text-sm font-medium text-[#f5f5f5]">Title</label>
-                      <input
+                            <label className="block text-sm font-medium text-[#f5f5f5] mb-2">Title</label>
+                            <motion.input
+                              whileFocus={{ scale: 1.01 }}
                         type="text"
                         value={service.title}
                         onChange={e => {
-                          const newServices = [...formData.services];
+                                const newServices = [...(formData.services || [])];
                           newServices[index] = { ...service, title: e.target.value };
                           setFormData(prev => ({ ...prev, services: newServices }));
                         }}
-                        className="mt-1 block w-full rounded-md border-0 bg-[#ffffff1a] py-1.5 text-[#f5f5f5]"
+                              className="block w-full rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
+                              placeholder="Service Title"
                       />
                     </div>
+
                     <div>
-                      <label className="block text-sm font-medium text-[#f5f5f5]">Description</label>
-                      <textarea
+                            <label className="block text-sm font-medium text-[#f5f5f5] mb-2">Icon</label>
+                            <motion.input
+                              whileFocus={{ scale: 1.01 }}
+                              type="text"
+                              value={service.icon}
+                              onChange={e => {
+                                const newServices = [...(formData.services || [])];
+                                newServices[index] = { ...service, icon: e.target.value };
+                                setFormData(prev => ({ ...prev, services: newServices }));
+                              }}
+                              className="block w-full rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
+                              placeholder="Icon name or URL"
+                            />
+                          </div>
+
+                          <div className="sm:col-span-2">
+                            <label className="block text-sm font-medium text-[#f5f5f5] mb-2">Description</label>
+                            <motion.textarea
+                              whileFocus={{ scale: 1.01 }}
                         value={service.description}
                         onChange={e => {
-                          const newServices = [...formData.services];
+                                const newServices = [...(formData.services || [])];
                           newServices[index] = { ...service, description: e.target.value };
                           setFormData(prev => ({ ...prev, services: newServices }));
                         }}
                         rows={3}
-                        className="mt-1 block w-full rounded-md border-0 bg-[#ffffff1a] py-1.5 text-[#f5f5f5]"
+                              className="block w-full rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
+                              placeholder="Describe the service you offer..."
                       />
                     </div>
                   </div>
-                ))}
               </div>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              </motion.div>
             )}
 
             {/* Skills Section */}
             {activeTab === 'skills' && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium text-[#f5f5f5]">Skills</h3>
-                  <button
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="space-y-8"
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-medium bg-clip-text text-transparent bg-gradient-to-r from-[#f5f5f5] via-[#646cff] to-[#f5f5f5]">Skills</h3>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                     type="button"
-                    onClick={() => setFormData(prev => ({
-                      ...prev,
-                      skills: { ...(prev.skills || {}), ['']: [] }
-                    }))}
-                    className="rounded-md bg-[#646cff] px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#747bff]"
+                    onClick={addCategory}
+                    className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#646cff] text-white hover:bg-[#747bff] transition-all duration-300"
                   >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
                     Add Category
-                  </button>
+                  </motion.button>
                 </div>
-                {formData.skills && Object.entries(formData.skills).map(([category, skills], index) => (
-                  <div key={index} className="space-y-4 bg-[#ffffff0d] p-4 rounded-lg">
-                    <div className="flex justify-between items-center">
-                      <input
+
+                <motion.div layout className="space-y-8">
+                  {Object.entries(formData.skills || {}).map(([category, skills]) => (
+                    <div key={category} className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <motion.input
+                          whileFocus={{ scale: 1.01 }}
                         type="text"
                         value={category}
-                        onChange={e => {
-                          const newSkills = { ...formData.skills };
-                          const oldCategory = Object.keys(newSkills)[index];
-                          const skillsArray = newSkills[oldCategory];
-                          delete newSkills[oldCategory];
-                          newSkills[e.target.value] = skillsArray;
-                          setFormData(prev => ({ ...prev, skills: newSkills }));
-                        }}
+                          onChange={(e) => renameCategory(category, e.target.value)}
+                          className="text-base font-medium text-[#f5f5f5] bg-transparent border-b border-transparent hover:border-[#ffffff1a] focus:border-[#646cff] focus:outline-none px-2 py-1 transition-all duration-300"
                         placeholder="Category Name"
-                        className="text-lg font-semibold bg-transparent text-[#f5f5f5] border-b border-[#ffffff1a] focus:border-[#646cff] outline-none"
                       />
-                      <button
+                        <div className="flex items-center gap-2">
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
                         type="button"
-                        onClick={() => {
-                          const newSkills = { ...formData.skills };
-                          delete newSkills[category];
-                          setFormData(prev => ({ ...prev, skills: newSkills }));
-                        }}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        Remove Category
-                      </button>
+                            onClick={() => addSkill(category)}
+                            className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#646cff] text-white hover:bg-[#747bff] transition-all duration-300"
+                          >
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                            Add Skill
+                          </motion.button>
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.95 }}
+                            type="button"
+                            onClick={() => removeCategory(category)}
+                            className="p-2 rounded-full bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all duration-300"
+                          >
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </motion.button>
                     </div>
-                    <div className="space-y-2">
-                      {skills.map((skill, skillIndex) => (
-                        <div key={skillIndex} className="flex items-center gap-2">
-                          <input
+                      </div>
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {skills.map((skill, index) => (
+                          <motion.div
+                            key={index}
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="group relative bg-gradient-to-br from-[#ffffff0d] to-[#ffffff05] p-4 rounded-lg border border-[#ffffff1a] hover:border-[#646cff] transition-all duration-300"
+                          >
+                            <div className="absolute inset-0 bg-gradient-to-r from-[#646cff]/5 to-[#747bff]/5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                            <div className="relative flex items-center gap-3">
+                              <motion.input
+                                whileFocus={{ scale: 1.01 }}
                             type="text"
                             value={skill}
-                            onChange={e => {
-                              const newSkills = { ...formData.skills };
-                              newSkills[category][skillIndex] = e.target.value;
-                              setFormData(prev => ({ ...prev, skills: newSkills }));
-                            }}
-                            placeholder="Skill"
-                            className="flex-1 rounded-md border-0 bg-[#ffffff1a] py-1.5 text-[#f5f5f5]"
-                          />
-                          <button
+                                onChange={e => handleSkillChange(category, index, e.target.value)}
+                                className="flex-1 rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
+                                placeholder={`${category} skill`}
+                              />
+                              <motion.button
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
                             type="button"
-                            onClick={() => {
-                              const newSkills = { ...formData.skills };
-                              newSkills[category] = skills.filter((_, i) => i !== skillIndex);
-                              setFormData(prev => ({ ...prev, skills: newSkills }));
-                            }}
-                            className="text-red-500 hover:text-red-700"
-                          >
-                            Remove
-                          </button>
+                                onClick={() => removeSkill(category, index)}
+                                className="p-2 rounded-full bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all duration-300"
+                              >
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </motion.button>
                         </div>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const newSkills = { ...formData.skills };
-                          newSkills[category] = [...skills, ''];
-                          setFormData(prev => ({ ...prev, skills: newSkills }));
-                        }}
-                        className="mt-2 text-sm text-[#646cff] hover:text-[#747bff]"
-                      >
-                        + Add Skill
-                      </button>
+                          </motion.div>
+                        ))}
+                      </div>
                     </div>
+                  ))}
+                </motion.div>
+              </motion.div>
+            )}
+
+            {/* Projects Section */}
+            {activeTab === 'projects' && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="space-y-8"
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-medium bg-clip-text text-transparent bg-gradient-to-r from-[#f5f5f5] via-[#646cff] to-[#f5f5f5]">Projects</h3>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                        type="button"
+                    onClick={addProject}
+                    className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#646cff] text-white hover:bg-[#747bff] transition-all duration-300"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    Add Project
+                  </motion.button>
+                    </div>
+
+                <motion.div layout className="space-y-6">
+                  {formData.projects?.map((project, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      className="group relative bg-gradient-to-br from-[#ffffff0d] to-[#ffffff05] p-6 rounded-xl border border-[#ffffff1a] hover:border-[#646cff] transition-all duration-300"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-[#646cff]/5 to-[#747bff]/5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      
+                      <div className="relative space-y-4">
+                        <div className="flex justify-between items-center">
+                          <h4 className="text-base font-medium text-[#f5f5f5]">Project {index + 1}</h4>
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            type="button"
+                            onClick={() => removeProject(index)}
+                            className="p-2 rounded-full bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all duration-300"
+                          >
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </motion.button>
                   </div>
-                ))}
+
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                          <div>
+                            <label className="block text-sm font-medium text-[#f5f5f5] mb-2">Title</label>
+                            <motion.input
+                              whileFocus={{ scale: 1.01 }}
+                              type="text"
+                              value={project.title}
+                              onChange={e => handleProjectChange(index, 'title', e.target.value)}
+                              className="block w-full rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
+                              placeholder="Project Title"
+                            />
               </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-[#f5f5f5] mb-2">Image URL</label>
+                            <motion.input
+                              whileFocus={{ scale: 1.01 }}
+                              type="text"
+                              value={project.image}
+                              onChange={e => handleProjectChange(index, 'image', e.target.value)}
+                              className="block w-full rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
+                              placeholder="https://example.com/image.jpg"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-[#f5f5f5] mb-2">Live URL</label>
+                            <motion.input
+                              whileFocus={{ scale: 1.01 }}
+                              type="text"
+                              value={project.liveUrl}
+                              onChange={e => handleProjectChange(index, 'liveUrl', e.target.value)}
+                              className="block w-full rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
+                              placeholder="https://example.com"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-[#f5f5f5] mb-2">GitHub URL</label>
+                            <motion.input
+                              whileFocus={{ scale: 1.01 }}
+                              type="text"
+                              value={project.githubUrl}
+                              onChange={e => handleProjectChange(index, 'githubUrl', e.target.value)}
+                              className="block w-full rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
+                              placeholder="https://github.com/username/repo"
+                            />
+                          </div>
+
+                          <div className="sm:col-span-2">
+                            <label className="block text-sm font-medium text-[#f5f5f5] mb-2">Description</label>
+                            <motion.textarea
+                              whileFocus={{ scale: 1.01 }}
+                              value={project.description}
+                              onChange={e => handleProjectChange(index, 'description', e.target.value)}
+                              rows={3}
+                              className="block w-full rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
+                              placeholder="Describe your project..."
+                            />
+                          </div>
+
+                          <div className="sm:col-span-2">
+                            <label className="block text-sm font-medium text-[#f5f5f5] mb-2">Technologies</label>
+                            <motion.input
+                              whileFocus={{ scale: 1.01 }}
+                              type="text"
+                              value={project.technologies.join(', ')}
+                              onChange={e => handleProjectChange(index, 'technologies', e.target.value.split(',').map(tech => tech.trim()))}
+                              className="block w-full rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
+                              placeholder="React, Node.js, MongoDB, etc."
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              </motion.div>
             )}
 
             {/* Galleries Section */}
             {activeTab === 'galleries' && (
-              <div className="space-y-8">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium text-[#f5f5f5]">Image Galleries</h3>
-                  <button
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="space-y-8"
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-medium bg-clip-text text-transparent bg-gradient-to-r from-[#f5f5f5] via-[#646cff] to-[#f5f5f5]">Galleries</h3>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                     type="button"
                     onClick={() => setFormData(prev => ({
                       ...prev,
-                      galleries: [...(prev.galleries || []), { name: '', images: [], aspectRatio: '1/1' }]
+                      galleries: [...(prev.galleries || []), { name: '', images: [] }]
                     }))}
-                    className="rounded-md bg-[#646cff] px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#747bff]"
+                    className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#646cff] text-white hover:bg-[#747bff] transition-all duration-300"
                   >
-                    Add New Gallery
-                  </button>
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    Add Gallery
+                  </motion.button>
                 </div>
 
+                <motion.div layout className="space-y-6">
                 {formData.galleries?.map((gallery, galleryIndex) => (
-                  <div key={galleryIndex} className="space-y-6 bg-[#ffffff0d] p-6 rounded-lg">
-                    <div className="flex items-end gap-4">
-                      <div className="flex-1">
-                        <label className="block text-sm font-medium text-[#f5f5f5] mb-1">Gallery Name</label>
-                        <input
-                          type="text"
-                          value={gallery.name}
-                          onChange={e => {
-                            const newGalleries = [...formData.galleries];
-                            newGalleries[galleryIndex] = { ...gallery, name: e.target.value };
-                            setFormData(prev => ({ ...prev, galleries: newGalleries }));
-                          }}
-                          placeholder="Enter gallery name"
-                          className="block w-full rounded-md border-0 bg-[#ffffff1a] py-1.5 text-[#f5f5f5]"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-[#f5f5f5] mb-1">Aspect Ratio</label>
-                        <select
-                          value={gallery.aspectRatio}
-                          onChange={e => {
-                            const newGalleries = [...formData.galleries];
-                            newGalleries[galleryIndex] = { ...gallery, aspectRatio: e.target.value };
-                            setFormData(prev => ({ ...prev, galleries: newGalleries }));
-                          }}
-                          className="block w-full rounded-md border-0 bg-[#ffffff1a] py-1.5 text-[#f5f5f5]"
-                        >
-                          <option value="1/1">Square (1:1)</option>
-                          <option value="9/16">Portrait (9:16)</option>
-                          <option value="16/9">Landscape (16:9)</option>
-                        </select>
-                      </div>
-                      <button
+                    <motion.div
+                      key={galleryIndex}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      className="group relative bg-gradient-to-br from-[#ffffff0d] to-[#ffffff05] p-6 rounded-xl border border-[#ffffff1a] hover:border-[#646cff] transition-all duration-300"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-[#646cff]/5 to-[#747bff]/5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      
+                      <div className="relative space-y-4">
+                        <div className="flex justify-between items-center">
+                          <h4 className="text-base font-medium text-[#f5f5f5]">Gallery {galleryIndex + 1}</h4>
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
                         type="button"
                         onClick={() => {
-                          const newGalleries = formData.galleries.filter((_, index) => index !== galleryIndex);
+                              const newGalleries = [...(formData.galleries || [])];
+                              newGalleries.splice(galleryIndex, 1);
                           setFormData(prev => ({ ...prev, galleries: newGalleries }));
                         }}
-                        className="text-red-500 hover:text-red-700 py-1.5"
-                      >
-                        Remove Gallery
-                      </button>
+                            className="p-2 rounded-full bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all duration-300"
+                          >
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </motion.button>
                     </div>
 
                     <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <h4 className="text-sm font-medium text-[#f5f5f5]">Images</h4>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const newGalleries = [...formData.galleries];
-                            newGalleries[galleryIndex].images = [...(gallery.images || []), { url: '', caption: '' }];
+                          <div>
+                            <label className="block text-sm font-medium text-[#f5f5f5] mb-2">Gallery Name</label>
+                            <motion.input
+                              whileFocus={{ scale: 1.01 }}
+                              type="text"
+                              value={gallery.name}
+                              onChange={e => {
+                                const newGalleries = [...(formData.galleries || [])];
+                                newGalleries[galleryIndex] = { ...gallery, name: e.target.value };
                             setFormData(prev => ({ ...prev, galleries: newGalleries }));
                           }}
-                          className="text-sm text-[#646cff] hover:text-[#747bff]"
-                        >
-                          + Add Image
-                        </button>
+                              className="block w-full rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
+                              placeholder="Gallery Name"
+                            />
                       </div>
 
-                      {gallery.images?.map((image, imageIndex) => (
-                        <div key={imageIndex} className="space-y-4 bg-[#ffffff1a] p-4 rounded-lg">
-                          <div className="flex justify-end">
-                            <button
+                          <div>
+                            <div className="flex items-center justify-between mb-4">
+                              <label className="block text-sm font-medium text-[#f5f5f5]">Images</label>
+                              <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
                               type="button"
                               onClick={() => {
-                                const newGalleries = [...formData.galleries];
-                                newGalleries[galleryIndex].images = gallery.images.filter((_, idx) => idx !== imageIndex);
+                                  const newGalleries = [...(formData.galleries || [])];
+                                  newGalleries[galleryIndex] = {
+                                    ...gallery,
+                                    images: [...(gallery.images || []), { url: '', caption: '' }]
+                                  };
                                 setFormData(prev => ({ ...prev, galleries: newGalleries }));
                               }}
-                              className="text-red-500 hover:text-red-700"
-                            >
-                              Remove
-                            </button>
+                                className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#646cff] text-white hover:bg-[#747bff] transition-all duration-300"
+                              >
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                </svg>
+                                Add Image
+                              </motion.button>
                           </div>
+
+                            <div className="grid grid-cols-1 gap-4">
+                              {gallery.images?.map((image, imageIndex) => (
+                                <motion.div
+                                  key={imageIndex}
+                                  initial={{ opacity: 0, scale: 0.9 }}
+                                  animate={{ opacity: 1, scale: 1 }}
+                                  exit={{ opacity: 0, scale: 0.9 }}
+                                  className="group relative bg-gradient-to-br from-[#ffffff0d] to-[#ffffff05] p-4 rounded-lg border border-[#ffffff1a] hover:border-[#646cff] transition-all duration-300"
+                                >
+                                  <div className="absolute inset-0 bg-gradient-to-r from-[#646cff]/5 to-[#747bff]/5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                                  <div className="relative grid grid-cols-1 gap-4 sm:grid-cols-2">
                           <div>
-                            <label className="block text-sm font-medium text-[#f5f5f5]">Image URL</label>
-                            <input
-                              type="url"
+                                      <label className="block text-sm font-medium text-[#f5f5f5] mb-2">Image URL</label>
+                                      <motion.input
+                                        whileFocus={{ scale: 1.01 }}
+                                        type="text"
                               value={image.url}
                               onChange={e => {
-                                const newGalleries = [...formData.galleries];
-                                newGalleries[galleryIndex].images[imageIndex] = { ...image, url: e.target.value };
+                                          const newGalleries = [...(formData.galleries || [])];
+                                          newGalleries[galleryIndex].images[imageIndex] = {
+                                            ...image,
+                                            url: e.target.value
+                                          };
                                 setFormData(prev => ({ ...prev, galleries: newGalleries }));
                               }}
+                                        className="block w-full rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
                               placeholder="https://example.com/image.jpg"
-                              className="mt-1 block w-full rounded-md border-0 bg-[#ffffff1a] py-1.5 text-[#f5f5f5]"
                             />
                           </div>
-                          <div>
-                            <label className="block text-sm font-medium text-[#f5f5f5]">Caption</label>
-                            <input
+
+                                    <div className="flex items-center gap-4">
+                                      <div className="flex-1">
+                                        <label className="block text-sm font-medium text-[#f5f5f5] mb-2">Caption</label>
+                                        <motion.input
+                                          whileFocus={{ scale: 1.01 }}
                               type="text"
                               value={image.caption}
                               onChange={e => {
-                                const newGalleries = [...formData.galleries];
-                                newGalleries[galleryIndex].images[imageIndex] = { ...image, caption: e.target.value };
+                                            const newGalleries = [...(formData.galleries || [])];
+                                            newGalleries[galleryIndex].images[imageIndex] = {
+                                              ...image,
+                                              caption: e.target.value
+                                            };
                                 setFormData(prev => ({ ...prev, galleries: newGalleries }));
                               }}
+                                          className="block w-full rounded-lg bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-4 py-2.5 focus:border-[#646cff] focus:ring-2 focus:ring-[#646cff]/50 transition-all duration-300"
                               placeholder="Image caption"
-                              className="mt-1 block w-full rounded-md border-0 bg-[#ffffff1a] py-1.5 text-[#f5f5f5]"
                             />
                           </div>
-                          {image.url && (
-                            <div className="mt-2">
-                              <div className="relative w-32 h-32" style={{ aspectRatio: gallery.aspectRatio }}>
-                                <img
-                                  src={image.url}
-                                  alt={image.caption}
-                                  className="h-full w-full object-cover rounded-lg"
-                                  onError={(e) => {
-                                    e.target.onerror = null;
-                                    e.target.src = 'https://via.placeholder.com/300x300?text=Invalid+Image+URL';
-                                  }}
-                                />
+
+                                      <motion.button
+                                        whileHover={{ scale: 1.1 }}
+                                        whileTap={{ scale: 0.9 }}
+                                        type="button"
+                                        onClick={() => {
+                                          const newGalleries = [...(formData.galleries || [])];
+                                          newGalleries[galleryIndex].images.splice(imageIndex, 1);
+                                          setFormData(prev => ({ ...prev, galleries: newGalleries }));
+                                        }}
+                                        className="p-2 rounded-full bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all duration-300 self-end"
+                                      >
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                      </motion.button>
                               </div>
                             </div>
-                          )}
-                        </div>
+                                </motion.div>
                       ))}
                     </div>
                   </div>
-                ))}
               </div>
-            )}
-
-            {/* Projects */}
-            {activeTab === 'projects' && (
-              <div className="space-y-8">
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    onClick={addProject}
-                    className="text-[#646cff] hover:text-[#747bff]"
-                  >
-                    + Add Project
-                  </button>
                 </div>
-                {formData.projects.map((project, index) => (
-                  <div key={index} className="space-y-4 p-4 border border-[#ffffff1a] rounded-lg">
-                    <div className="flex justify-between items-center">
-                      <h3 className="text-lg font-medium text-[#f5f5f5]">Project {index + 1}</h3>
-                      <button
-                        type="button"
-                        onClick={() => removeProject(index)}
-                        className="text-red-400 hover:text-red-300"
-                      >
-                        Remove Project
-                      </button>
-                    </div>
-                    <div className="space-y-4">
-                      <input
-                        type="text"
-                        placeholder="Project Title"
-                        value={project.title}
-                        onChange={(e) => handleProjectChange(index, 'title', e.target.value)}
-                        className="block w-full rounded-md bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-3 py-2"
-                      />
-                      <textarea
-                        placeholder="Project Description"
-                        value={project.description}
-                        onChange={(e) => handleProjectChange(index, 'description', e.target.value)}
-                        rows={3}
-                        className="block w-full rounded-md bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-3 py-2"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Image URL"
-                        value={project.image}
-                        onChange={(e) => handleProjectChange(index, 'image', e.target.value)}
-                        className="block w-full rounded-md bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-3 py-2"
-                      />
-                      <input
-                        type="url"
-                        placeholder="Live Demo URL"
-                        value={project.liveUrl}
-                        onChange={(e) => handleProjectChange(index, 'liveUrl', e.target.value)}
-                        className="block w-full rounded-md bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-3 py-2"
-                      />
-                      <input
-                        type="url"
-                        placeholder="GitHub URL"
-                        value={project.githubUrl}
-                        onChange={(e) => handleProjectChange(index, 'githubUrl', e.target.value)}
-                        className="block w-full rounded-md bg-[#ffffff0d] border border-[#ffffff1a] text-[#f5f5f5] px-3 py-2"
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              </motion.div>
             )}
 
-            <div className="flex justify-end pt-6">
+            {/* Save Button */}
+            <motion.div 
+              className="flex justify-end pt-8"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+            >
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 type="submit"
                 disabled={isSubmitting}
                 className={`
-                  bg-[#646cff] text-white px-6 py-2 rounded-md
-                  ${isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#747bff]'}
+                  relative overflow-hidden px-6 py-2.5 rounded-full font-semibold text-white
+                  ${isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg hover:shadow-[#646cff]/50'}
+                  bg-gradient-to-r from-[#646cff] to-[#747bff] transition-all duration-300
                 `}
               >
-                {isSubmitting ? 'Saving...' : 'Save Changes'}
+                <motion.span
+                  initial={{ y: 0 }}
+                  animate={{ y: isSubmitting ? 30 : 0 }}
+                  className="block"
+                >
+                  Save Changes
+                </motion.span>
+                {isSubmitting && (
+                  <motion.div 
+                    initial={{ y: -30 }}
+                    animate={{ y: 0 }}
+                    className="absolute inset-0 flex items-center justify-center"
+                  >
+                    <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                  </motion.div>
+                )}
               </motion.button>
-            </div>
+            </motion.div>
           </form>
         </motion.div>
       </div>

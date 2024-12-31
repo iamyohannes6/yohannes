@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard'
 import ProjectsManager from './pages/ProjectsManager'
 import AboutManager from './pages/AboutManager'
 import ContactManager from './pages/ContactManager'
+import SkillsManager from './pages/SkillsManager'
 import Layout from './components/Layout'
 
 function PrivateRoute({ children }) {
@@ -29,6 +30,7 @@ export default function App() {
         <Route path="projects" element={<ProjectsManager />} />
         <Route path="about" element={<AboutManager />} />
         <Route path="contact" element={<ContactManager />} />
+        <Route path="skills" element={<SkillsManager />} />
       </Route>
     </Routes>
   )

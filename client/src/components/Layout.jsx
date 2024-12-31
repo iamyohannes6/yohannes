@@ -58,10 +58,10 @@ export default function Layout({ children }) {
         scrolled ? 'bg-[#0a0a0a]/95 backdrop-blur-md shadow-lg shadow-black/5' : ''
       }`}>
         <div className="relative">
-          {/* Navbar Background with Blur */}
+          {/* Navbar Background with Blur and Border */}
           <div className={`absolute inset-0 transition-opacity duration-300 ${
             scrolled ? 'opacity-100' : 'opacity-0'
-          } border-b border-[#ffffff1a]`} />
+          } border-b border-[#ffffff1a] after:absolute after:inset-0 after:bg-gradient-to-r after:from-[#646cff]/10 after:via-transparent after:to-[#747bff]/10`} />
           
           {/* Navbar Content */}
           <div className="relative mx-auto max-w-7xl px-6 lg:px-8">
@@ -72,24 +72,36 @@ export default function Layout({ children }) {
                   to="/"
                   className="relative group -m-1.5 p-1.5"
                 >
-                  <span className="text-xl font-bold tracking-tight text-[#f5f5f5] transition-colors group-hover:text-[#646cff]">
+                  <motion.span 
+                    className="text-xl font-bold tracking-tight text-[#f5f5f5] transition-colors group-hover:text-[#646cff]"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
                     Yohannes
-                  </span>
-                  <span className="absolute -bottom-0.5 left-1/2 w-0 h-[2px] bg-[#646cff] group-hover:w-1/2 group-hover:left-1/4 transition-all duration-300" />
+                  </motion.span>
+                  <motion.span 
+                    className="absolute -bottom-0.5 left-1/2 w-0 h-[2px] bg-[#646cff]"
+                    initial={{ width: 0, left: "50%" }}
+                    whileHover={{ width: "50%", left: "25%" }}
+                    transition={{ duration: 0.3 }}
+                  />
                 </NavLink>
               </div>
 
               {/* Mobile menu button */}
-              <div className="flex lg:hidden">
+              <motion.div 
+                className="flex lg:hidden"
+                whileTap={{ scale: 0.95 }}
+              >
                 <button
                   type="button"
-                  className="-m-2.5 inline-flex items-center justify-center rounded-lg p-2.5 text-[#f5f5f5] transition-colors hover:bg-[#ffffff0d]"
+                  className="-m-2.5 inline-flex items-center justify-center rounded-lg p-2.5 text-[#f5f5f5] transition-all hover:bg-[#ffffff0d] hover:text-[#646cff]"
                   onClick={() => setMobileMenuOpen(true)}
                 >
                   <span className="sr-only">Open main menu</span>
                   <Bars3Icon className="h-6 w-6" aria-hidden="true" />
                 </button>
-              </div>
+              </motion.div>
 
               {/* Desktop navigation */}
               <div className="hidden lg:flex lg:gap-x-8">
@@ -105,142 +117,219 @@ export default function Layout({ children }) {
                       }`
                     }
                   >
-                    {item.name}
-                    <span className={`absolute inset-x-3 -bottom-px h-[2px] transform transition-all duration-300 ${
-                      location.pathname === item.href
-                        ? 'bg-[#646cff]'
-                        : 'bg-[#646cff] scale-x-0 group-hover:scale-x-100'
-                    }`} />
+                    <motion.span
+                      initial={{ y: 0 }}
+                      whileHover={{ y: -2 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      {item.name}
+                    </motion.span>
+                    <motion.span 
+                      className={`absolute inset-x-3 -bottom-px h-[2px] transform ${
+                        location.pathname === item.href
+                          ? 'bg-[#646cff]'
+                          : 'bg-gradient-to-r from-[#646cff] to-[#747bff] scale-x-0 group-hover:scale-x-100'
+                      }`}
+                      transition={{ duration: 0.3 }}
+                    />
                   </NavLink>
                 ))}
               </div>
 
               {/* Hire me button */}
               <div className="hidden lg:flex lg:flex-1 lg:justify-end">
-                <a
+                <motion.a
                   href="https://www.linkedin.com/in/yohannes-goitom-1b29022ab"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="group relative overflow-hidden rounded-full bg-[#646cff] px-4 py-1.5 transition-all duration-300 hover:bg-[#747bff]"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                 >
                   <div className="relative flex items-center gap-x-2">
-                    <span className="text-sm font-semibold text-white">
+                    <motion.span 
+                      className="text-sm font-semibold text-white"
+                      initial={{ x: 0 }}
+                      whileHover={{ x: -2 }}
+                    >
                       Hire me
-                    </span>
-                    <svg
-                      className="h-5 w-5 text-white transition-transform duration-300 group-hover:translate-x-1"
+                    </motion.span>
+                    <motion.svg
+                      className="h-5 w-5 text-white"
                       fill="none"
                       viewBox="0 0 24 24"
                       strokeWidth="2"
                       stroke="currentColor"
+                      initial={{ x: 0 }}
+                      whileHover={{ x: 2 }}
                     >
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3"
                       />
-                    </svg>
+                    </motion.svg>
                   </div>
-                  <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#646cff] via-[#747bff] to-[#646cff] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-                </a>
+                  <motion.div 
+                    className="absolute inset-0 -z-10 bg-gradient-to-r from-[#646cff] via-[#747bff] to-[#646cff]"
+                    initial={{ opacity: 0, x: "-100%" }}
+                    whileHover={{ opacity: 1, x: "0%" }}
+                    transition={{ duration: 0.3 }}
+                  />
+                </motion.a>
               </div>
             </div>
           </div>
         </div>
 
         {/* Mobile menu */}
-        <div
-          className={`${
-            mobileMenuOpen ? 'fixed' : 'hidden'
-          } inset-0 z-50 lg:hidden`}
-          aria-modal="true"
-        >
-          {/* Background overlay */}
-          <div
-            className="fixed inset-0 bg-[#0a0a0a]/80 backdrop-blur-md transition-opacity duration-300"
-            onClick={() => setMobileMenuOpen(false)}
-          />
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-50 lg:hidden"
+              aria-modal="true"
+            >
+              {/* Background overlay */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="fixed inset-0 bg-[#0a0a0a]/80 backdrop-blur-md"
+                onClick={() => setMobileMenuOpen(false)}
+              />
 
-          {/* Menu panel */}
-          <div className="fixed inset-y-0 right-0 w-full max-w-xs bg-[#0a0a0a] p-6 transition-transform duration-300">
-            <div className="flex items-center justify-between">
-              <NavLink
-                to="/"
-                className="group relative -m-1.5 p-1.5"
-                onClick={() => setMobileMenuOpen(false)}
+              {/* Menu panel */}
+              <motion.div
+                initial={{ x: "100%" }}
+                animate={{ x: 0 }}
+                exit={{ x: "100%" }}
+                transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                className="fixed inset-y-0 right-0 w-full max-w-xs bg-[#0a0a0a] p-6"
               >
-                <span className="text-xl font-bold tracking-tight text-[#f5f5f5] transition-colors group-hover:text-[#646cff]">
-                  Yohannes
-                </span>
-                <span className="absolute -bottom-0.5 left-1/2 w-0 h-[2px] bg-[#646cff] group-hover:w-1/2 group-hover:left-1/4 transition-all duration-300" />
-              </NavLink>
-              <button
-                type="button"
-                className="-m-2.5 rounded-lg p-2.5 text-[#f5f5f5] transition-colors hover:bg-[#ffffff0d]"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <span className="sr-only">Close menu</span>
-                <XMarkIcon className="h-6 w-6" aria-hidden="true" />
-              </button>
-            </div>
-            <div className="mt-6 flow-root">
-              <div className="space-y-2 py-6">
-                {navigation.map((item) => (
+                <div className="flex items-center justify-between">
                   <NavLink
-                    key={item.name}
-                    to={item.href}
-                    className={({ isActive }) =>
-                      `group relative block rounded-lg px-3 py-2 text-base font-semibold transition-all ${
-                        isActive
-                          ? 'text-[#646cff] bg-[#646cff15]'
-                          : 'text-[#f5f5f5] hover:text-[#646cff] hover:bg-[#646cff15]'
-                      }`
-                    }
+                    to="/"
+                    className="group relative -m-1.5 p-1.5"
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    <div className="flex items-center justify-between">
-                      <span>{item.name}</span>
-                      {location.pathname === item.href && (
-                        <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                        </svg>
-                      )}
-                    </div>
-                  </NavLink>
-                ))}
-              </div>
-              <div className="py-6">
-                <a
-                  href="https://www.linkedin.com/in/yohannes-goitom-1b29022ab"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group relative block overflow-hidden rounded-full bg-[#646cff] px-4 py-2 text-center transition-all duration-300 hover:bg-[#747bff]"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <div className="relative flex items-center justify-center gap-x-2">
-                    <span className="text-sm font-semibold text-white">
-                      Hire me
-                    </span>
-                    <svg
-                      className="h-5 w-5 text-white transition-transform duration-300 group-hover:translate-x-1"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth="2"
-                      stroke="currentColor"
+                    <motion.span 
+                      className="text-xl font-bold tracking-tight text-[#f5f5f5] transition-colors group-hover:text-[#646cff]"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3"
-                      />
-                    </svg>
+                      Yohannes
+                    </motion.span>
+                    <motion.span 
+                      className="absolute -bottom-0.5 left-1/2 w-0 h-[2px] bg-[#646cff]"
+                      initial={{ width: 0, left: "50%" }}
+                      whileHover={{ width: "50%", left: "25%" }}
+                      transition={{ duration: 0.3 }}
+                    />
+                  </NavLink>
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
+                    type="button"
+                    className="-m-2.5 rounded-lg p-2.5 text-[#f5f5f5] transition-colors hover:bg-[#ffffff0d] hover:text-[#646cff]"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <span className="sr-only">Close menu</span>
+                    <XMarkIcon className="h-6 w-6" aria-hidden="true" />
+                  </motion.button>
+                </div>
+                <div className="mt-6 flow-root">
+                  <div className="space-y-2 py-6">
+                    {navigation.map((item) => (
+                      <motion.div
+                        key={item.name}
+                        initial={{ x: 20, opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <NavLink
+                          to={item.href}
+                          className={({ isActive }) =>
+                            `group relative block rounded-lg px-3 py-2 text-base font-semibold transition-all ${
+                              isActive
+                                ? 'text-[#646cff] bg-[#646cff15]'
+                                : 'text-[#f5f5f5] hover:text-[#646cff] hover:bg-[#646cff15]'
+                            }`
+                          }
+                          onClick={() => setMobileMenuOpen(false)}
+                        >
+                          <motion.div 
+                            className="flex items-center justify-between"
+                            whileHover={{ x: 5 }}
+                          >
+                            <span>{item.name}</span>
+                            {location.pathname === item.href && (
+                              <motion.svg 
+                                className="h-5 w-5"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                transition={{ type: "spring", damping: 10, stiffness: 100 }}
+                              >
+                                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                              </motion.svg>
+                            )}
+                          </motion.div>
+                        </NavLink>
+                      </motion.div>
+                    ))}
                   </div>
-                  <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#646cff] via-[#747bff] to-[#646cff] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
+                  <div className="py-6">
+                    <motion.a
+                      href="https://www.linkedin.com/in/yohannes-goitom-1b29022ab"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group relative block overflow-hidden rounded-full bg-[#646cff] px-4 py-2 text-center transition-all duration-300 hover:bg-[#747bff]"
+                      onClick={() => setMobileMenuOpen(false)}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <div className="relative flex items-center justify-center gap-x-2">
+                        <motion.span 
+                          className="text-sm font-semibold text-white"
+                          initial={{ x: 0 }}
+                          whileHover={{ x: -2 }}
+                        >
+                          Hire me
+                        </motion.span>
+                        <motion.svg
+                          className="h-5 w-5 text-white"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          strokeWidth="2"
+                          stroke="currentColor"
+                          initial={{ x: 0 }}
+                          whileHover={{ x: 2 }}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3"
+                          />
+                        </motion.svg>
+                      </div>
+                      <motion.div 
+                        className="absolute inset-0 -z-10 bg-gradient-to-r from-[#646cff] via-[#747bff] to-[#646cff]"
+                        initial={{ opacity: 0, x: "-100%" }}
+                        whileHover={{ opacity: 1, x: "0%" }}
+                        transition={{ duration: 0.3 }}
+                      />
+                    </motion.a>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </nav>
 
       {/* Content */}

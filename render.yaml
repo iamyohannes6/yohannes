@@ -1,0 +1,8 @@
+services:
+  - type: web
+    name: portfolio
+    buildCommand: cd client && npm install && npm run build
+    staticPublishPath: ./client/dist
+    envVars:
+      - key: NODE_ENV
+        value: production

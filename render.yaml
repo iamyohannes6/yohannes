@@ -1,14 +1,8 @@
 services:
-  - type: web
+  - type: static
     name: portfolio
     buildCommand: cd client && npm install && npm run build
-    staticPublishPath: client/dist
-    env: node
-    buildFilter:
-      paths:
-        - client/**/*
+    publishPath: client/dist
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PATH
-        value: /opt/render/project/node_modules/.bin:$PATH

@@ -3,6 +3,7 @@ import { Outlet, useLocation, NavLink } from 'react-router-dom'
 import { XMarkIcon, Bars3Icon } from '@heroicons/react/24/outline'
 import { AnimatePresence, motion, useScroll, useTransform, useSpring, useReducedMotion } from 'framer-motion'
 import { performanceProps } from '../utils/animations'
+import { trackPageVisit } from '../services/visitorTrackingService'
 
 export default function Layout({ children }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -10,6 +11,12 @@ export default function Layout({ children }) {
   const location = useLocation()
   const { scrollY } = useScroll()
   const shouldReduceMotion = useReducedMotion()
+
+  // Track page visits
+  useEffect(() => {
+    const pageName = location.pathname === '/' ? 'Home' : location.pathname.slice(1).charAt(0).toUpperCase() + location.pathname.slice(2);
+    trackPageVisit(pageName);
+  }, [location.pathname]);
 
   // Optimized scroll transforms
   const backgroundY = useTransform(scrollY, [0, 500], [0, shouldReduceMotion ? 0 : 150])

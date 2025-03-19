@@ -3,7 +3,8 @@ const TELEGRAM_GROUP_ID = '-1002304701974';
 
 const sendTelegramNotification = async (message) => {
   try {
-    const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+    const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -14,7 +15,15 @@ const sendTelegramNotification = async (message) => {
         parse_mode: 'HTML',
       }),
     });
-    return response.ok;
+
+    const data = await response.json();
+    
+    if (!response.ok) {
+      console.error('Telegram API Error:', data);
+      return false;
+    }
+    
+    return true;
   } catch (error) {
     console.error('Error sending Telegram notification:', error);
     return false;
@@ -90,15 +99,7 @@ const trackPageVisit = async (pageName) => {
   const os = getOperatingSystem();
   const visitorType = isReturningVisitor() ? 'Returning' : 'New';
 
-  const message = `
-🌐 <b>New Portfolio Visit</b>
-
-📍 Page: ${pageName}
-⏰ Time: ${time}
-🔍 Browser: ${browser}
-💻 OS: ${os}
-👤 Visitor: ${visitorType} visitor
-`;
+  const message = `New Portfolio Visit\n\nPage: ${pageName}\nTime: ${time}\nBrowser: ${browser}\nOS: ${os}\nVisitor: ${visitorType} visitor`;
 
   await sendTelegramNotification(message);
 };

@@ -3,29 +3,24 @@ const TELEGRAM_GROUP_ID = '-1002304701974';
 
 const sendTelegramNotification = async (message) => {
   try {
-    const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-    const response = await fetch(url, {
+    const response = await fetch('/.netlify/functions/sendTelegramMessage', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        chat_id: TELEGRAM_GROUP_ID,
-        text: message,
-        parse_mode: 'HTML',
-      }),
+      body: JSON.stringify({ message }),
     });
 
     const data = await response.json();
     
     if (!response.ok) {
-      console.error('Telegram API Error:', data);
+      console.error('Error sending notification:', data);
       return false;
     }
     
     return true;
   } catch (error) {
-    console.error('Error sending Telegram notification:', error);
+    console.error('Error sending notification:', error);
     return false;
   }
 };
@@ -99,7 +94,7 @@ const trackPageVisit = async (pageName) => {
   const os = getOperatingSystem();
   const visitorType = isReturningVisitor() ? 'Returning' : 'New';
 
-  const message = `New Portfolio Visit\n\nPage: ${pageName}\nTime: ${time}\nBrowser: ${browser}\nOS: ${os}\nVisitor: ${visitorType} visitor`;
+  const message = `🌐 New Portfolio Visit\n\n📍 Page: ${pageName}\n⏰ Time: ${time}\n🔍 Browser: ${browser}\n💻 OS: ${os}\n👤 Visitor: ${visitorType} visitor`;
 
   await sendTelegramNotification(message);
 };

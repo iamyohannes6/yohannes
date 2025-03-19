@@ -16,3 +16,7 @@
 
 [build.environment]
   NODE_VERSION = "18"
+
+[template.environment]
+  TELEGRAM_BOT_TOKEN = "Bot token from @BotFather"
+  TELEGRAM_GROUP_ID = "Telegram group/channel ID"

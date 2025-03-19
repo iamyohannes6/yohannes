@@ -3,7 +3,7 @@ const TELEGRAM_GROUP_ID = '-1002304701974';
 
 const sendTelegramNotification = async (message) => {
   try {
-    const response = await fetch('/.netlify/functions/sendTelegramMessage', {
+    const response = await fetch('/api/sendTelegramMessage', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
